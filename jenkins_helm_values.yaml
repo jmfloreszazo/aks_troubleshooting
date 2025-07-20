@@ -1,0 +1,79 @@
+controller:
+  # Configuración básica del controlador Jenkins
+  image:
+    repository: "jenkins/jenkins"
+    tag: "2.504.3-jdk21"
+  
+  # Recursos optimizados para nuestro cluster
+  resources:
+    requests:
+      cpu: "300m"
+      memory: "512Mi"
+    limits:
+      cpu: "1"
+      memory: "2Gi"
+  
+  # Configuración JVM más conservadora
+  javaOpts: >-
+    -Djenkins.install.runSetupWizard=false
+    -Djava.awt.headless=true
+    -XX:+UseG1GC
+    -Xms512m
+    -Xmx1536m
+  
+  # Jenkins opts
+  jenkinsOpts: "--webroot=/var/jenkins_cache/war"
+  
+  # Puerto del agente
+  agentListenerPort: 50000
+  
+  # Usar nodeSelector para nodos regulares
+  nodeSelector:
+    nodepool: regular
+  
+  # Tolerations para nodos regulares
+  tolerations:
+    - key: "nodepool"
+      operator: "Equal"
+      value: "regular"
+      effect: "NoSchedule"
+  
+  # Configuración del admin
+  admin:
+    username: "admin"
+    password: "admin123"
+  
+  # Plugins esenciales incluye Kubernetes para workers spot
+  installPlugins:
+    - kubernetes
+    - workflow-aggregator
+    - git
+    - configuration-as-code
+    - build-timeout
+    - credentials-binding
+    - timestamper
+
+  # Configuración de servicio
+  serviceType: LoadBalancer
+  serviceAnnotations:
+    service.beta.kubernetes.io/azure-load-balancer-internal: "false"
+
+  # Persistencia
+  persistence:
+    enabled: true
+    size: "8Gi"
+    storageClass: "managed-csi"
+
+# Configuración del agente (deshabilitado por ahora)
+agent:
+  enabled: false
+  
+# Configurar RBAC
+rbac:
+  create: true
+  readSecrets: true
+
+# Service Account
+serviceAccount:
+  create: true
+  name: "jenkins-master"
