@@ -29,6 +29,8 @@ The solution creates a multi-node pool AKS cluster with the following components
 ├── 01_create_cluster.sh          # AKS cluster creation with node pools
 ├── 02_deploy_jenkins.sh          # Jenkins Master deployment
 ├── 03_configure_rbac.sh          # RBAC and service account setup
+├── 04_manual_jenkins_config      # Jenkins cloud configuration (manual)
+├── 05_deploy_observability.sh    # Observability stack (Work in Progress)
 ├── jenkins_spot_cloud.groovy     # Jenkins cloud configuration script
 ├── demo_spot_complete_pipeline.groovy  # Sample pipeline for testing
 ├── test-workloads.yaml           # Kubernetes test workloads
@@ -88,7 +90,15 @@ SPOT_NODE_SIZE="Standard_DS2_v2"
 
 # Step 3: Configure RBAC permissions
 ./03_configure_rbac.sh
-```## Prerequisites
+
+# Step 4: Configure Jenkins Cloud (Manual)
+# Follow section "5. Configure Jenkins Cloud" below
+
+# Step 5: Deploy observability stack (Work in Progress)
+# ./05_deploy_observability.sh - Coming soon
+```
+
+## Prerequisites
 
 ### Azure Requirements
 - Azure CLI installed and authenticated
@@ -187,6 +197,28 @@ The `03_configure_rbac.sh` script configures:
 - Secret and ConfigMap read access
 - Node information read access (for auto-scaling)
 - Limited cluster-wide read permissions
+
+### Step 4: Jenkins Cloud Configuration (Manual)
+
+This step requires manual configuration through Jenkins UI using the provided Groovy script.
+See "Jenkins Cloud Configuration" section below for detailed instructions.
+
+### Step 5: Observability Stack (Work in Progress)
+
+The `05_deploy_observability.sh` script is currently under development and will provide:
+
+- **Prometheus**: Metrics collection and alerting
+- **Grafana**: Visualization dashboards
+- **Loki**: Log aggregation
+- **Fluent Bit**: Log forwarding
+- **Custom Dashboards**: Jenkins and AKS monitoring
+
+**Current Status**: Development in progress
+**Expected Features**:
+- Automated observability stack deployment
+- Pre-configured dashboards for Jenkins metrics
+- Alert rules for spot instance interruptions
+- Cost monitoring and optimization insights
 
 ## Jenkins Cloud Configuration
 
