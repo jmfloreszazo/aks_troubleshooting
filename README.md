@@ -1,129 +1,137 @@
 # AKS Jenkins Spot Workers - Troubleshooting v2
 
-Este proyecto configura un cluster AKS con Jenkins Master y Workers en nodos spot, incluyendo un stack completo de observabilidad.
+This project sets up an AKS cluster with Jenkins Master and Workers on spot nodes, including a complete observability stack.
 
-## 📁 Estructura del Proyecto
+## 📁 Project Structure
 
 ```
 aks_troubleshooting_v2/
-├── 00_setup_subscription.sh          # Configuración inicial de Azure
-├── 01_create_cluster.sh               # Creación del cluster AKS
-├── 02_deploy_jenkins.sh               # Despliegue de Jenkins Master
-├── 03_configure_jenkins_spot.sh       # Configuración de workers spot
-├── 04_aks_diagnostic_report_full.sh   # Diagnósticos del cluster
-├── 05_install_observability.sh        # Stack de observabilidad
-├── 06_verify_spot_monitoring.sh       # Verificación de monitoreo
-├── fix_spot_dashboard.sh              # Dashboard de Grafana
-├── working_spot_queries.sh            # Consultas de prueba Loki
-├── common.sh                          # Funciones comunes
-├── .env.production                    # Variables de entorno
-├── helm/                              # Configuraciones Helm
+├── 00_setup_subscription.sh          # Azure initial setup
+├── 01_create_cluster.sh               # AKS cluster creation
+├── 02_deploy_jenkins.sh               # Jenkins Master deployment
+├── 03_configure_jenkins_spot.sh       # Spot workers configuration
+├── 04_aks_diagnostic_report_full.sh   # Cluster diagnostics
+├── 05_install_observability.sh        # Observability stack
+├── 06_verify_spot_monitoring.sh       # Monitoring verification
+├── common.sh                          # Common functions
+├── .env.production                    # Environment variables
+├── grafana/                           # Grafana and Loki scripts
+│   ├── spot_dashboard.sh              # → Spot monitoring dashboard
+│   └── spot_queries.sh                # → Loki test queries
+├── helm/                              # Helm configurations
 │   ├── jenkins_helm_values.yaml       # → Jenkins Master
 │   ├── loki_helm_values.yaml          # → Loki (logs)
-│   ├── fluent_bit_helm_values.yaml    # → Fluent Bit (recolección)
-│   └── grafana_helm_values.yaml       # → Grafana (visualización)
-└── jenkins_scripts/                   # Scripts Groovy
-    ├── jenkins_spot_cloud.groovy      # → Configuración cloud
-    ├── demo_spot_complete_pipeline.groovy      # → Pipeline demo
-    └── monitor_spot_workers_pipeline.groovy    # → Pipeline monitoreo
+│   ├── fluent_bit_helm_values.yaml    # → Fluent Bit (collection)
+│   └── grafana_helm_values.yaml       # → Grafana (visualization)
+└── jenkins_scripts/                   # Groovy scripts
+    ├── jenkins_spot_cloud.groovy      # → Cloud configuration
+    ├── demo_spot_complete_pipeline.groovy      # → Demo pipeline
+    └── monitor_spot_workers_pipeline.groovy    # → Monitoring pipeline
 ```
 
-## 🚀 Ejecución Secuencial
+## 🚀 Sequential Execution
 
-### 1. Configuración inicial
+### 1. Initial setup
 ```bash
 ./00_setup_subscription.sh
 ```
 
-### 2. Creación del cluster
+### 2. Cluster creation
 ```bash
 ./01_create_cluster.sh
 ```
 
-### 3. Despliegue de Jenkins Master
+### 3. Jenkins Master deployment
 ```bash
 ./02_deploy_jenkins.sh
 ```
 
-### 4. Configuración de workers spot
+### 4. Spot workers configuration
 ```bash
 ./03_configure_jenkins_spot.sh
 ```
 
-### 5. Stack de observabilidad
+### 5. Observability stack
 ```bash
 ./05_install_observability.sh
 ```
 
-### 6. Dashboard y consultas
+### 6. Dashboard and queries
+
 ```bash
-./fix_spot_dashboard.sh
-./working_spot_queries.sh
+./grafana/spot_dashboard.sh
+./grafana/spot_queries.sh
 ```
 
-## 📊 Componentes del Stack de Observabilidad
+## 📊 Observability Stack Components
 
-- **Loki**: Almacenamiento de logs (nodos regulares)
-- **Fluent Bit**: Recolección de logs (todos los nodos)
-- **Grafana**: Visualización y dashboards (nodos regulares)
+- **Loki**: Log storage (regular nodes)
+- **Fluent Bit**: Log collection (all nodes)
+- **Grafana**: Visualization and dashboards (regular nodes)
 
-## 🔧 Configuración de Nodos
+## 🔧 Node Configuration
 
-- **Sistema**: Componentes del cluster
+- **System**: Cluster components
 - **Regular**: Jenkins Master, Loki, Grafana
-- **Spot**: Jenkins Workers (con tolerations)
+- **Spot**: Jenkins Workers (with tolerations)
 
-## 📝 Archivos de Configuración
+## 📝 Configuration Files
 
 ### Helm Values
-- `helm/jenkins_helm_values.yaml`: Configuración Jenkins con LoadBalancer
-- `helm/loki_helm_values.yaml`: Loki SingleBinary para nodos regulares
-- `helm/fluent_bit_helm_values.yaml`: Recolección con tolerations para todos los nodos
-- `helm/grafana_helm_values.yaml`: Grafana con datasource Loki preconfigurado
+- `helm/jenkins_helm_values.yaml`: Jenkins configuration with LoadBalancer
+- `helm/loki_helm_values.yaml`: Loki SingleBinary for regular nodes
+- `helm/fluent_bit_helm_values.yaml`: Collection with tolerations for all nodes
+- `helm/grafana_helm_values.yaml`: Grafana with pre-configured Loki datasource
 
 ### Jenkins Scripts
-- `jenkins_scripts/jenkins_spot_cloud.groovy`: Configuración automática de cloud spot
-- `jenkins_scripts/demo_spot_complete_pipeline.groovy`: Pipeline demo profesional
-- `jenkins_scripts/monitor_spot_workers_pipeline.groovy`: Pipeline de monitoreo avanzado
 
-## 🎯 Monitoreo de Spot Workers
+- `jenkins_scripts/jenkins_spot_cloud.groovy`: Automatic spot cloud configuration
+- `jenkins_scripts/demo_spot_complete_pipeline.groovy`: Professional demo pipeline
+- `jenkins_scripts/monitor_spot_workers_pipeline.groovy`: Advanced monitoring pipeline
 
-El sistema incluye:
-- Logs centralizados en Loki
-- Dashboards específicos para workers spot
-- Consultas predefinidas para troubleshooting
-- Monitoreo de lifecycle de nodos spot
+### Grafana Scripts
 
-## 🔗 Accesos
+- `grafana/spot_dashboard.sh`: Spot workers specific monitoring dashboard
+- `grafana/spot_queries.sh`: Test and troubleshooting queries for Loki
 
-Después de la instalación:
-- **Jenkins**: IP externa del LoadBalancer
-- **Grafana**: IP externa del LoadBalancer (admin/admin123)
+## 🎯 Spot Workers Monitoring
 
-## 🧪 Verificación
+The system includes:
+- Centralized logs in Loki
+- Spot workers specific dashboards
+- Pre-defined queries for troubleshooting
+- Spot node lifecycle monitoring
+
+## 🔗 Access
+
+After installation:
+- **Jenkins**: LoadBalancer external IP
+- **Grafana**: LoadBalancer external IP (admin/admin123)
+
+## 🧪 Verification
 
 ```bash
-# Verificar cluster
+# Verify cluster
 kubectl get nodes
 
-# Verificar pods
+# Verify pods
 kubectl get pods -A
 
-# Verificar observabilidad
+# Verify observability
 kubectl get pods -n observability-stack
 
-# Probar consultas
-./working_spot_queries.sh
+# Test queries
+./grafana/spot_queries.sh
 ```
 
 ## 📋 Troubleshooting
 
-Para diagnósticos completos:
+For complete diagnostics:
 ```bash
 ./04_aks_diagnostic_report_full.sh
 ```
 
-Para verificar monitoreo:
+To verify monitoring:
 ```bash
 ./06_verify_spot_monitoring.sh
 ```
