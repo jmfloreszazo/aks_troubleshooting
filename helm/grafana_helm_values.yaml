@@ -33,6 +33,16 @@ resources:
     cpu: 500m
     memory: 512Mi
 
+# Programar en nodos regulares (como Loki)
+nodeSelector:
+  nodepool: regular
+
+tolerations:
+  - key: "nodepool"
+    operator: "Equal"
+    value: "regular"
+    effect: "NoSchedule"
+
 env:
   GF_EXPLORE_ENABLED: true
   GF_LOG_LEVEL: info

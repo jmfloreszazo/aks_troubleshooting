@@ -25,21 +25,21 @@ helm repo update >/dev/null 2>&1
 log "INFO" "Installing Loki (log storage)..."
 helm upgrade --install loki grafana/loki \
   --namespace observability-stack \
-  --values loki_helm_values.yaml \
+  --values helm/loki_helm_values.yaml \
   --wait
 
 # Install Fluent Bit
 log "INFO" "Installing Fluent Bit (log collection)..."
 helm upgrade --install fluent-bit fluent/fluent-bit \
   --namespace observability-stack \
-  --values fluent_bit_helm_values.yaml \
+  --values helm/fluent_bit_helm_values.yaml \
   --wait
 
 # Install Grafana
 log "INFO" "Installing Grafana (visualization)..."
 helm upgrade --install grafana grafana/grafana \
   --namespace observability-stack \
-  --values grafana_helm_values.yaml \
+  --values helm/grafana_helm_values.yaml \
   --wait
 
 # Wait for components

@@ -1,0 +1,86 @@
+# Configuración para Loki versión moderna (6.32.0)
+deploymentMode: SingleBinary
+
+loki:
+  auth_enabled: false
+  useTestSchema: true
+  commonConfig:
+    replication_factor: 1
+  storage:
+    type: 'filesystem'
+
+singleBinary:
+  replicas: 1
+  persistence:
+    enabled: true
+    size: 10Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  # Programar en nodos regulares
+  nodeSelector:
+    nodepool: regular
+  tolerations:
+    - key: "nodepool"
+      operator: "Equal"
+      value: "regular"
+      effect: "NoSchedule"
+
+# Desactivar componentes distribuidos para SingleBinary
+gateway:
+  enabled: false
+read:
+  replicas: 0
+write:
+  replicas: 0
+backend:
+  replicas: 0
+
+# Configurar chunks cache para nodos regulares también  
+chunksCache:
+  enabled: true
+  replicas: 1
+  nodeSelector:
+    nodepool: regular
+  tolerations:
+    - key: "nodepool"
+      operator: "Equal"
+      value: "regular"
+      effect: "NoSchedule"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 200m
+      memory: 512Mi
+
+# Configurar results cache para nodos regulares
+resultsCache:
+  enabled: true
+  replicas: 1
+  nodeSelector:
+    nodepool: regular
+  tolerations:
+    - key: "nodepool"
+      operator: "Equal"
+      value: "regular"
+      effect: "NoSchedule"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 200m
+      memory: 512Mi
+
+monitoring:
+  selfMonitoring:
+    enabled: false
+
+test:
+  enabled: false

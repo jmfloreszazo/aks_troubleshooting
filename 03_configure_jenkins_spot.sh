@@ -93,9 +93,9 @@ log "INFO" "Executing Jenkins configuration scripts..."
 
 # Check if required Groovy scripts exist
 REQUIRED_SCRIPTS=(
-    "jenkins_spot_cloud.groovy"
-    "demo_spot_complete_pipeline.groovy"
-    "monitor_spot_workers_pipeline.groovy"
+    "jenkins_scripts/jenkins_spot_cloud.groovy"
+    "jenkins_scripts/demo_spot_complete_pipeline.groovy"
+    "jenkins_scripts/monitor_spot_workers_pipeline.groovy"
 )
 
 for script in "${REQUIRED_SCRIPTS[@]}"; do
@@ -112,7 +112,7 @@ log "SUCCESS" "All required Groovy scripts are available"
 log "INFO" "Creating test pipeline for spot workers..."
 
 # Note: test_spot_workers_pipeline.groovy no longer generated
-# Using existing files: jenkins_spot_cloud.groovy, demo_spot_complete_pipeline.groovy, monitor_spot_workers_pipeline.groovy
+# Using existing files: jenkins_scripts/jenkins_spot_cloud.groovy, jenkins_scripts/demo_spot_complete_pipeline.groovy, jenkins_scripts/monitor_spot_workers_pipeline.groovy
 log "SUCCESS" "Using existing Groovy configuration files instead of generating new ones"
 
 log "SUCCESS" "Test pipeline created: test_spot_workers_pipeline.groovy"
@@ -127,7 +127,7 @@ echo "1. Go to: $JENKINS_URL"
 echo "2. Login: admin / admin123"
 echo "3. Go to: Manage Jenkins > Script Console"
 echo "4. Copy and paste the content from file:"
-echo "   jenkins_spot_cloud.groovy"
+echo "   jenkins_scripts/jenkins_spot_cloud.groovy"
 echo "5. Click 'Run'"
 echo "6. You should see: 'CONFIGURATION COMPLETED SUCCESSFULLY'"
 echo ""
@@ -135,15 +135,15 @@ echo ""
 echo "STEP 3B: CREATE AND EXECUTE PIPELINES"
 echo "=====================================  "
 echo "Available pipeline scripts:"
-echo "1. demo_spot_complete_pipeline.groovy - Complete demo with ASCII banners"
-echo "2. monitor_spot_workers_pipeline.groovy - Advanced monitoring for troubleshooting"
+echo "1. jenkins_scripts/demo_spot_complete_pipeline.groovy - Complete demo with ASCII banners"
+echo "2. jenkins_scripts/monitor_spot_workers_pipeline.groovy - Advanced monitoring for troubleshooting"
 echo ""
 echo "To create each pipeline:"
 echo "1. Go to Jenkins Dashboard"
 echo "2. Click 'New Item'"
 echo "3. Choose pipeline name:"
-echo "   - 'Demo-Spot-Complete' (for demo_spot_complete_pipeline.groovy)"
-echo "   - 'Monitor-Spot-Workers' (for monitor_spot_workers_pipeline.groovy)"
+echo "   - 'Demo-Spot-Complete' (for jenkins_scripts/demo_spot_complete_pipeline.groovy)"
+echo "   - 'Monitor-Spot-Workers' (for jenkins_scripts/monitor_spot_workers_pipeline.groovy)"
 echo "4. Type: 'Pipeline'"
 echo "5. Click 'OK'"
 echo "6. In configuration, under 'Pipeline Script', paste content from respective file"
@@ -153,12 +153,12 @@ echo ""
 
 echo "PIPELINE DESCRIPTIONS:"
 echo "====================="
-echo "demo_spot_complete_pipeline.groovy:"
+echo "jenkins_scripts/demo_spot_complete_pipeline.groovy:"
 echo "  - Complete demo with professional banners"
 echo "  - Cost analysis and verification"
 echo "  - Production-ready spot worker validation"
 echo ""
-echo "monitor_spot_workers_pipeline.groovy:"
+echo "jenkins_scripts/monitor_spot_workers_pipeline.groovy:"
 echo "  - Advanced diagnostics for spot worker issues"
 echo "  - Memory, disk, and network monitoring"
 echo "  - Ideal for troubleshooting client problems"
@@ -166,26 +166,26 @@ echo ""
 
 echo "CREATED FILES:"
 echo "============="
-echo "jenkins_spot_cloud.groovy - Automatic cloud configuration"
-echo "demo_spot_complete_pipeline.groovy - Professional demo pipeline"
-echo "monitor_spot_workers_pipeline.groovy - Advanced monitoring pipeline"
+echo "jenkins_scripts/jenkins_spot_cloud.groovy - Automatic cloud configuration"
+echo "jenkins_scripts/demo_spot_complete_pipeline.groovy - Professional demo pipeline"
+echo "jenkins_scripts/monitor_spot_workers_pipeline.groovy - Advanced monitoring pipeline"
 echo ""
 
 echo "PREVIEW - CLOUD CONFIGURATION:"
 echo "=============================="
-head -20 jenkins_spot_cloud.groovy
+head -20 jenkins_scripts/jenkins_spot_cloud.groovy
 echo "... (see complete file for full script)"
 echo ""
 
 echo "PREVIEW - DEMO PIPELINE:"
 echo "========================"
-head -15 demo_spot_complete_pipeline.groovy
+head -15 jenkins_scripts/demo_spot_complete_pipeline.groovy
 echo "... (see complete file for full pipeline)"
 echo ""
 
 echo "PREVIEW - MONITORING PIPELINE:"
 echo "============================="
-head -15 monitor_spot_workers_pipeline.groovy
+head -15 jenkins_scripts/monitor_spot_workers_pipeline.groovy
 echo "... (see complete file for full monitoring pipeline)"
 echo ""
 

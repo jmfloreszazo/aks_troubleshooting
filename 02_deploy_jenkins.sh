@@ -28,8 +28,8 @@ helm repo add jenkins https://charts.jenkins.io
 helm repo update
 
 # Verify values file exists
-if [ ! -f "jenkins_helm_values.yaml" ]; then
-    echo "❌ Error: Archivo jenkins_helm_values.yaml no encontrado"
+if [ ! -f "helm/jenkins_helm_values.yaml" ]; then
+    echo "❌ Error: Archivo helm/jenkins_helm_values.yaml no encontrado"
     exit 1
 fi
 
@@ -38,7 +38,7 @@ echo "🚀 Desplegando Jenkins Master..."
 helm install jenkins-master jenkins/jenkins \
   --namespace jenkins-master \
   --create-namespace \
-  --values jenkins_helm_values.yaml \
+  --values helm/jenkins_helm_values.yaml \
   --wait \
   --timeout=10m
 
