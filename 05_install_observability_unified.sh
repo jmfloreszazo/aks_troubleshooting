@@ -3,7 +3,7 @@
 # 05_install_observability_unified.sh - Stack de Observabilidad Completo Unificado
 # Instala Fluent Bit + Loki + Grafana con consultas predefinidas y dashboards automáticos
 
-source .env
+source .env.production
 source common.sh
 
 echo "🔍 PASO 5: STACK DE OBSERVABILIDAD COMPLETO"
@@ -287,11 +287,11 @@ if [ ! -z "$GRAFANA_IP" ]; then
     GRAFANA_URL="http://$GRAFANA_IP"
     log "SUCCESS" "Grafana disponible en: $GRAFANA_URL"
     
-    # Actualizar .env
-    if grep -q "GRAFANA_URL=" .env; then
-        sed -i "s|GRAFANA_URL=.*|GRAFANA_URL=\"$GRAFANA_URL\"|" .env
+    # Actualizar .env.production
+    if grep -q "GRAFANA_URL=" .env.production; then
+        sed -i "s|GRAFANA_URL=.*|GRAFANA_URL=\"$GRAFANA_URL\"|" .env.production
     else
-        echo "GRAFANA_URL=\"$GRAFANA_URL\"" >> .env
+        echo "GRAFANA_URL=\"$GRAFANA_URL\"" >> .env.production
     fi
 else
     log "WARNING" "No se pudo obtener IP externa de Grafana"

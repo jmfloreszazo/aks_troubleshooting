@@ -29,9 +29,6 @@ validate_step "cluster" || exit 1
 
 log "INFO" "Starting AKS cluster creation..."
 
-# Create configuration backup
-backup_env
-
 # === STEP 1.1: CREATE RESOURCE GROUP ===
 log "INFO" "Creating Resource Group: $RESOURCE_GROUP"
 
@@ -160,7 +157,7 @@ else
     log "INFO" "Checking Low Priority Cores quota..."
     echo "NOTE: This cluster will use 0-$SPOT_MAX_COUNT spot node(s) with auto-scaling"
     echo "   Maximum spot cores required: $((SPOT_MAX_COUNT * 2)) (available quota: 3)"
-    echo "   If quota error occurs, adjust SPOT_MAX_COUNT in .env"
+    echo "   If quota error occurs, adjust SPOT_MAX_COUNT in .env.production"
     
     # Use min-count=0 for spot nodes (scale from zero)
     az aks nodepool add \
@@ -189,7 +186,7 @@ else
         echo ""
         echo "QUOTA ERROR SOLUTIONS:"
         echo "====================="
-        echo "1. Reduce SPOT_MAX_COUNT in .env (current: $SPOT_MAX_COUNT)"
+        echo "1. Reduce SPOT_MAX_COUNT in .env.production (current: $SPOT_MAX_COUNT)"
         echo "2. Change to smaller VM (e.g., Standard_B2s = 2 cores)"
         echo "3. Request quota increase in Azure Portal"
         echo ""

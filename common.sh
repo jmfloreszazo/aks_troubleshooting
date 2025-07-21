@@ -3,22 +3,22 @@
 # common.sh - Funciones comunes
 # Parte del sistema AKS + Jenkins + Spot Workers
 
-# Función para actualizar variables en .env
+# Función para actualizar variables en .env.production
 update_env_var() {
     local var_name="$1"
     local var_value="$2"
     
-    if [ -f .env ]; then
+    if [ -f .env.production ]; then
         # Si la variable existe, actualizarla
-        if grep -q "^${var_name}=" .env; then
-            sed -i "s|^${var_name}=.*|${var_name}=${var_value}|" .env
+        if grep -q "^${var_name}=" .env.production; then
+            sed -i "s|^${var_name}=.*|${var_name}=${var_value}|" .env.production
         else
             # Si no existe, añadirla
-            echo "${var_name}=${var_value}" >> .env
+            echo "${var_name}=${var_value}" >> .env.production
         fi
     else
-        # Si no existe .env, crearlo
-        echo "${var_name}=${var_value}" > .env
+        # Si no existe .env.production, crearlo
+        echo "${var_name}=${var_value}" > .env.production
     fi
 }
 
@@ -97,11 +97,12 @@ check_azure_login() {
 
 # Función para cargar variables de entorno
 load_env() {
-    if [ -f .env ]; then
-        source .env
-        echo "✅ Variables cargadas desde .env"
+    if [ -f .env.production ]; then
+        source .env.production
+        echo "✅ Variables cargadas desde .env.production"
     else
-        echo "❌ Archivo .env no encontrado"
+        echo "❌ Archivo .env.production no encontrado"
+        echo "Por favor ejecuta primero: ./00_setup_subscription.sh"
         exit 1
     fi
 }
@@ -149,14 +150,14 @@ log() {
     echo "[$level] $message"
 }
 
-# Función para hacer backup del .env
-backup_env() {
-    if [ -f .env ]; then
-        local timestamp=$(date +%Y%m%d_%H%M%S)
-        cp .env ".env.backup.$timestamp"
-        echo "✅ Backup de .env creado: .env.backup.$timestamp"
-    fi
-}
+# Función para hacer backup del .env.production (DISABLED - no auto backups)
+# backup_env() {
+#     if [ -f .env.production ]; then
+#         local timestamp=$(date +%Y%m%d_%H%M%S)
+#         cp .env.production ".env.production.backup.$timestamp"
+#         echo "✅ Backup de .env.production creado: .env.production.backup.$timestamp"
+#     fi
+# }
 
 # Alias para compatibilidad
 update_env() {

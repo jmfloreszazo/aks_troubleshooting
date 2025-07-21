@@ -3,7 +3,7 @@
 # 02_deploy_jenkins.sh - Deploy Jenkins Master
 # Part of AKS + Jenkins + Spot Workers system
 
-source .env
+source .env.production
 source common.sh
 
 echo "Deploying Jenkins Master"
@@ -65,7 +65,7 @@ if [ $? -eq 0 ]; then
     echo "👤 Usuario: admin"
     echo "🔐 Contraseña: admin123"
     echo ""
-    # Actualizar .env con la IP
+    # Actualizar .env.production con la IP
     update_env_var "JENKINS_URL" "http://$EXTERNAL_IP:8080"
     
     echo ""

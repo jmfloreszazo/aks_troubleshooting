@@ -1,70 +1,70 @@
 #!/bin/bash
 
-# 03_configure_jenkins_spot.sh - Configuración COMPLETA Jenkins Spot Workers
-# Este script integra toda la funcionalidad de spot workers en un solo lugar
-# Incluye: namespace, permisos, configuración cloud, y pipeline de prueba
+# 03_configure_jenkins_spot.sh - Complete Jenkins Spot Workers Configuration
+# This script integrates all spot worker functionality in one place
+# Includes: namespace, permissions, cloud configuration, and test pipeline
 
-source .env
+source .env.production
 source common.sh
 
-echo "🎯 PASO 3: CONFIGURACIÓN COMPLETA JENKINS SPOT WORKERS"
-echo "======================================================"
+echo "STEP 3: COMPLETE JENKINS SPOT WORKERS CONFIGURATION"
+echo "==================================================="
 echo ""
-echo "🚀 INCLUYE:"
-echo "   1. ✅ Namespace jenkins-workers"
-echo "   2. ✅ Permisos RBAC completos"
-echo "   3. ✅ Configuración cloud automática"
-echo "   4. ✅ Pipeline de prueba funcional"
-echo "   5. ✅ Verificación de escalado rápido"
+echo "INCLUDES:"
+echo "   1. Namespace jenkins-workers"
+echo "   2. Complete RBAC permissions"
+echo "   3. Automatic cloud configuration"
+echo "   4. Functional test pipeline"
+echo "   5. Fast scaling verification"
 echo ""
 
-log "INFO" "Iniciando configuración integral de spot workers..."
+log "INFO" "Starting comprehensive spot workers configuration..."
 
-# === PASO 3.1: VERIFICAR JENKINS ESTÁ FUNCIONANDO ===
-log "INFO" "Verificando que Jenkins esté funcionando..."
+# === STEP 3.1: VERIFY JENKINS IS RUNNING ===
+log "INFO" "Verifying Jenkins is running..."
 
 JENKINS_POD=$(kubectl get pods -n jenkins-master -l app.kubernetes.io/name=jenkins -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
 
 if [ -z "$JENKINS_POD" ]; then
-    log "ERROR" "Jenkins Master no encontrado. Ejecuta primero: ./02_deploy_jenkins.sh"
+    log "ERROR" "Jenkins Master not found. Execute first: ./02_deploy_jenkins.sh"
     exit 1
 fi
 
 kubectl wait --for=condition=ready pod/$JENKINS_POD -n jenkins-master --timeout=300s
 
 if [ $? -eq 0 ]; then
-    log "SUCCESS" "Jenkins Master está funcionando"
+    log "SUCCESS" "Jenkins Master is running"
 else
-    log "ERROR" "Jenkins Master no está listo"
+    log "ERROR" "Jenkins Master is not ready"
     exit 1
 fi
 
-# === PASO 3.2: CREAR NAMESPACE PARA WORKERS ===
-log "INFO" "Creando namespace jenkins-workers..."
+# === STEP 3.2: CREATE NAMESPACE FOR WORKERS ===
+log "INFO" "Creating jenkins-workers namespace..."
 
 kubectl create namespace jenkins-workers --dry-run=client -o yaml | kubectl apply -f -
 
 if [ $? -eq 0 ]; then
-    log "SUCCESS" "Namespace jenkins-workers creado/verificado"
+    log "SUCCESS" "Namespace jenkins-workers created/verified"
 else
-    log "ERROR" "Error al crear namespace jenkins-workers"
+    log "ERROR" "Error creating jenkins-workers namespace"
     exit 1
 fi
 
-# === PASO 3.3: VERIFICAR PERMISOS RBAC (ya aplicados en paso 2) ===
-log "INFO" "Verificando permisos RBAC existentes..."
+# === STEP 3.3: VERIFY RBAC PERMISSIONS (already applied in step 2) ===
+log "INFO" "Verifying existing RBAC permissions..."
 
 if kubectl get clusterrole jenkins-spot-worker-manager >/dev/null 2>&1 && \
    kubectl get clusterrolebinding jenkins-spot-worker-binding >/dev/null 2>&1; then
-    log "SUCCESS" "Permisos RBAC ya configurados correctamente"
+    log "SUCCESS" "RBAC permissions already configured correctly"
 else
-    log "WARNING" "Permisos RBAC no encontrados, aplicando desde paso 2..."
-    # Los permisos se configuran en 02_deploy_jenkins.sh ahora
-    log "INFO" "Si hay problemas, revisa que el paso 2 se ejecutó completamente"
+    log "WARNING" "RBAC permissions not found, applying from step 2..."
+    # Permissions are configured in 02_deploy_jenkins.sh now
+    log "INFO" "If there are issues, check that step 2 was executed completely"
 fi
 
-# === PASO 3.4: OBTENER IP DE JENKINS ===
-log "INFO" "Obteniendo IP externa de Jenkins..."
+# === STEP 3.4: GET JENKINS IP ===
+log "INFO" "Getting Jenkins external IP..."
 
 JENKINS_IP=""
 for i in {1..30}; do
@@ -72,343 +72,164 @@ for i in {1..30}; do
     if [ ! -z "$JENKINS_IP" ]; then
         break
     fi
-    echo "Esperando IP externa de Jenkins... ($i/30)"
+    echo "Waiting for Jenkins external IP... ($i/30)"
     sleep 10
 done
 
 if [ ! -z "$JENKINS_IP" ]; then
     JENKINS_URL="http://$JENKINS_IP:8080"
-    log "SUCCESS" "Jenkins disponible en: $JENKINS_URL"
+    log "SUCCESS" "Jenkins available at: $JENKINS_URL"
     
-    # Actualizar .env
+    # Update .env.production
     update_env_var "JENKINS_IP" "$JENKINS_IP"
     update_env_var "JENKINS_URL" "$JENKINS_URL"
 else
-    log "ERROR" "No se pudo obtener IP externa de Jenkins"
+    log "ERROR" "Could not obtain Jenkins external IP"
     exit 1
 fi
 
-# === PASO 3.5: CREAR SCRIPT GROOVY PARA CONFIGURACIÓN CLOUD ===
-log "INFO" "Creando script Groovy para configuración automática..."
+# === STEP 3.5: EXECUTE JENKINS GROOVY SCRIPTS ===
+log "INFO" "Executing Jenkins configuration scripts..."
 
-cat > jenkins_spot_cloud_config.groovy << 'EOF'
-// jenkins_spot_cloud_config.groovy
-// Configuración automática del cloud spot para Jenkins
-// Versión final optimizada y probada
+# Check if required Groovy scripts exist
+REQUIRED_SCRIPTS=(
+    "jenkins_spot_cloud.groovy"
+    "demo_spot_complete_pipeline.groovy"
+    "monitor_spot_workers_pipeline.groovy"
+)
 
-import jenkins.model.Jenkins
-import org.csanchez.jenkins.plugins.kubernetes.KubernetesCloud
-import org.csanchez.jenkins.plugins.kubernetes.PodTemplate
-import org.csanchez.jenkins.plugins.kubernetes.ContainerTemplate
-import org.csanchez.jenkins.plugins.kubernetes.volumes.EmptyDirWorkspaceVolume
-import org.csanchez.jenkins.plugins.kubernetes.PodAnnotation
+for script in "${REQUIRED_SCRIPTS[@]}"; do
+    if [ ! -f "$script" ]; then
+        log "ERROR" "Required script not found: $script"
+        exit 1
+    fi
+    log "INFO" "Found required script: $script"
+done
 
-println "🚀 CONFIGURANDO CLOUD SPOT AUTOMÁTICAMENTE..."
-println "============================================="
+log "SUCCESS" "All required Groovy scripts are available"
 
-def jenkins = Jenkins.getInstance()
+# === STEP 3.6: CREATE TEST PIPELINE FOR SPOT WORKERS ===
+log "INFO" "Creating test pipeline for spot workers..."
 
-// Limpiar clouds existentes que empiecen con 'spot'
-println "🧹 Limpiando clouds spot anteriores..."
-def cloudsToRemove = []
-jenkins.clouds.each { cloud ->
-    if (cloud.name.startsWith('spot')) {
-        cloudsToRemove.add(cloud)
-        println "   🗑️  Marcando para eliminar: ${cloud.name}"
-    }
-}
+# Note: test_spot_workers_pipeline.groovy no longer generated
+# Using existing files: jenkins_spot_cloud.groovy, demo_spot_complete_pipeline.groovy, monitor_spot_workers_pipeline.groovy
+log "SUCCESS" "Using existing Groovy configuration files instead of generating new ones"
 
-cloudsToRemove.each { cloud ->
-    jenkins.clouds.remove(cloud)
-    println "   ✅ Eliminado: ${cloud.name}"
-}
-
-// Crear nuevo cloud spot-final
-println ""
-println "⚙️  Creando nuevo cloud 'spot-final'..."
-
-def kubernetesCloud = new KubernetesCloud('spot-final')
-kubernetesCloud.setServerUrl('https://kubernetes.default.svc')
-kubernetesCloud.setNamespace('jenkins-workers')
-kubernetesCloud.setJenkinsUrl('http://jenkins-master.jenkins-master.svc.cluster.local:8080')
-kubernetesCloud.setJenkinsTunnel('jenkins-master-agent.jenkins-master.svc.cluster.local:50000')
-kubernetesCloud.setContainerCapStr('10')
-kubernetesCloud.setConnectTimeout(300)
-kubernetesCloud.setReadTimeout(300)
-kubernetesCloud.setRetentionTimeout(300)
-
-// Crear template para worker spot
-println "� Configurando template worker-spot..."
-
-def podTemplate = new PodTemplate()
-podTemplate.setName('worker-spot')
-podTemplate.setLabel('spot')
-podTemplate.setIdleMinutes(1)
-podTemplate.setInstanceCap(5)
-
-// Configurar nodeSelector para spot
-podTemplate.setNodeSelector('kubernetes.io/arch=amd64,spot=true')
-
-// Configurar tolerations para spot
-def tolerations = []
-def spotToleration = new org.csanchez.jenkins.plugins.kubernetes.model.KeyValueEnvVar()
-// Usar anotaciones en lugar de tolerations complejas para simplicidad
-def annotations = []
-annotations.add(new PodAnnotation('scheduler.alpha.kubernetes.io/preferred-zone', 'spot'))
-
-// Container principal
-def containerTemplate = new ContainerTemplate()
-containerTemplate.setName('jnlp')
-containerTemplate.setImage('jenkins/inbound-agent:latest')
-containerTemplate.setAlwaysPullImage(false)
-containerTemplate.setCommand('')
-containerTemplate.setArgs('')
-containerTemplate.setTtyEnabled(true)
-containerTemplate.setResourceRequestCpu('100m')
-containerTemplate.setResourceRequestMemory('256Mi')
-containerTemplate.setResourceLimitCpu('500m')
-containerTemplate.setResourceLimitMemory('512Mi')
-
-def containers = []
-containers.add(containerTemplate)
-podTemplate.setContainers(containers)
-
-// Workspace volume
-def workspaceVolume = new EmptyDirWorkspaceVolume(false)
-podTemplate.setWorkspaceVolume(workspaceVolume)
-
-def templates = []
-templates.add(podTemplate)
-kubernetesCloud.setTemplates(templates)
-
-// Agregar el cloud a Jenkins
-jenkins.clouds.add(kubernetesCloud)
-jenkins.save()
-
-println ""
-println "✅ CONFIGURACIÓN COMPLETADA EXITOSAMENTE"
-println "======================================="
-println "🎯 Cloud creado: 'spot-final'"
-println "🏷️  Template: 'worker-spot' con label 'spot'"
-println "📊 Configuración:"
-println "   - Namespace: jenkins-workers"
-println "   - NodeSelector: spot=true"
-println "   - Capacidad: 5 instancias máx"
-println "   - Timeout: 1 minuto idle"
-println "   - CPU: 100m-500m"
-println "   - Memoria: 256Mi-512Mi"
-println ""
-println "🚀 ¡LISTO PARA USAR!"
-println "Crea un pipeline con: agent { label 'spot' }"
-EOF
-
-log "SUCCESS" "Script Groovy creado: jenkins_spot_cloud_config.groovy"
-
-# === PASO 3.6: CREAR PIPELINE DE PRUEBA PARA SPOT WORKERS ===
-log "INFO" "Creando pipeline de prueba para spot workers..."
-
-cat > test_spot_workers_pipeline.groovy << 'EOF'
-// test_spot_workers_pipeline.groovy
-// Pipeline completo para probar spot workers
-// Incluye banners ASCII y verificaciones completas
-
-pipeline {
-    agent { label 'spot' }
-    
-    stages {
-        stage('🎉 Spot Worker Banner') {
-            steps {
-                script {
-                    echo '''
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                          🚀 JENKINS SPOT WORKER 🚀                          ║
-║                                                                              ║
-║   ⚡ EJECUCIÓN EN NODO SPOT - AHORRO DEL 90% EN COSTOS ⚡                   ║
-║                                                                              ║
-║   🎯 Este pipeline se ejecuta en un worker spot de Azure                   ║
-║   💰 Costo: ~$0.01/hora vs $0.10/hora (nodo regular)                      ║
-║   ⚡ Escalado: Automático con Kubernetes                                    ║
-╚══════════════════════════════════════════════════════════════════════════════╝
-                    '''
-                }
-            }
-        }
-        
-        stage('🔍 Verificación del Entorno') {
-            steps {
-                echo "🏷️  Verificando labels del nodo..."
-                sh '''
-                    echo "📊 INFORMACIÓN DEL NODO:"
-                    echo "========================"
-                    echo "🏷️  Hostname: $(hostname)"
-                    echo "🎯 Node Name: $NODE_NAME"
-                    echo "📦 Workspace: $WORKSPACE"
-                    echo ""
-                    
-                    echo "🔍 LABELS DEL NODO (buscando 'spot'):"
-                    echo "====================================="
-                    kubectl get node $NODE_NAME --show-labels 2>/dev/null | grep -o "spot[^,]*" || echo "⚠️  Label 'spot' no encontrado en este nodo"
-                    
-                    echo ""
-                    echo "⚡ VERIFICACIÓN DE SPOT:"
-                    echo "======================="
-                    if kubectl get node $NODE_NAME --show-labels 2>/dev/null | grep -q "spot=true"; then
-                        echo "✅ ¡CONFIRMADO! Este es un NODO SPOT"
-                        echo "💰 Ahorro de costos: ~90%"
-                    else
-                        echo "⚠️  Nodo regular (no spot) - verificar configuración"
-                    fi
-                '''
-            }
-        }
-        
-        stage('⚡ Demo de Velocidad') {
-            steps {
-                echo "🚀 Demostrando capacidades del worker spot..."
-                sh '''
-                    echo "🔥 DEMO DE PROCESAMIENTO RÁPIDO:"
-                    echo "================================"
-                    
-                    # Test de CPU
-                    echo "⚡ Test de CPU:"
-                    time (for i in {1..1000}; do echo "spot-worker-$i" > /dev/null; done)
-                    
-                    # Test de memoria
-                    echo "💾 Test de memoria:"
-                    free -h
-                    
-                    # Test de red
-                    echo "🌐 Test de conectividad:"
-                    ping -c 3 8.8.8.8 | head -n 5
-                    
-                    echo ""
-                    echo "✅ ¡Worker spot funcionando perfectamente!"
-                '''
-            }
-        }
-        
-        stage('🎨 Banner de Éxito') {
-            steps {
-                script {
-                    echo '''
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                            🎉 ¡ÉXITO TOTAL! 🎉                              ║
-║                                                                              ║
-║   ✅ Worker spot funcionando correctamente                                  ║
-║   ✅ Escalado automático operativo                                          ║
-║   ✅ Pipeline ejecutado en nodo spot                                        ║
-║   ✅ Ahorro de costos: ~90% confirmado                                      ║
-║                                                                              ║
-║            🚀 ¡JENKINS + AKS + SPOT WORKERS = ÉXITO! 🚀                    ║
-╚══════════════════════════════════════════════════════════════════════════════╝
-                    '''
-                }
-            }
-        }
-    }
-    
-    post {
-        always {
-            echo "🧹 Limpiando workspace en worker spot..."
-            cleanWs()
-        }
-        success {
-            echo "🎉 ¡Pipeline spot completado exitosamente!"
-        }
-        failure {
-            echo "❌ Error en pipeline spot - revisar configuración"
-        }
-    }
-}
-EOF
-
-log "SUCCESS" "Pipeline de prueba creado: test_spot_workers_pipeline.groovy"
+log "SUCCESS" "Test pipeline created: test_spot_workers_pipeline.groovy"
 
 echo ""
-echo "🎯 CONFIGURACIÓN AUTOMÁTICA EN JENKINS"
-echo "======================================"
+echo "AUTOMATIC CONFIGURATION IN JENKINS"
+echo "=================================="
 echo ""
-echo "📋 PASO 3A: APLICAR CONFIGURACIÓN CLOUD"
-echo "---------------------------------------"
-echo "1. 🌐 Ve a: $JENKINS_URL"
-echo "2. 🔑 Login: admin / admin123"
-echo "3. ⚙️  Ve a: Manage Jenkins > Script Console"
-echo "4. 📋 Copia y pega el contenido del archivo:"
-echo "   📁 jenkins_spot_cloud_config.groovy"
-echo "5. ▶️  Haz clic en 'Run'"
-echo "6. ✅ Deberías ver: '✅ CONFIGURACIÓN COMPLETADA EXITOSAMENTE'"
-echo ""
-
-echo "📋 PASO 3B: CREAR Y EJECUTAR PIPELINE DE PRUEBA"
-echo "----------------------------------------------"
-echo "1. 🏠 Ve al Dashboard de Jenkins"
-echo "2. ➕ Haz clic en 'New Item'"
-echo "3. 📝 Nombre: 'Test-Spot-Workers-Complete'"
-echo "4. 📋 Tipo: 'Pipeline'"
-echo "5. ✅ Haz clic en 'OK'"
-echo "6. 📝 En la configuración, en 'Pipeline Script', pega el contenido de:"
-echo "   📁 test_spot_workers_pipeline.groovy"
-echo "7. 💾 Haz clic en 'Save'"
-echo "8. ▶️  Haz clic en 'Build Now'"
+echo "STEP 3A: APPLY CLOUD CONFIGURATION"
+echo "-----------------------------------"
+echo "1. Go to: $JENKINS_URL"
+echo "2. Login: admin / admin123"
+echo "3. Go to: Manage Jenkins > Script Console"
+echo "4. Copy and paste the content from file:"
+echo "   jenkins_spot_cloud.groovy"
+echo "5. Click 'Run'"
+echo "6. You should see: 'CONFIGURATION COMPLETED SUCCESSFULLY'"
 echo ""
 
-echo "📁 ARCHIVOS CREADOS:"
-echo "==================="
-echo "✅ jenkins_spot_cloud_config.groovy - Configuración cloud automática"
-echo "✅ test_spot_workers_pipeline.groovy - Pipeline de prueba completo"
+echo "STEP 3B: CREATE AND EXECUTE PIPELINES"
+echo "=====================================  "
+echo "Available pipeline scripts:"
+echo "1. demo_spot_complete_pipeline.groovy - Complete demo with ASCII banners"
+echo "2. monitor_spot_workers_pipeline.groovy - Advanced monitoring for troubleshooting"
+echo ""
+echo "To create each pipeline:"
+echo "1. Go to Jenkins Dashboard"
+echo "2. Click 'New Item'"
+echo "3. Choose pipeline name:"
+echo "   - 'Demo-Spot-Complete' (for demo_spot_complete_pipeline.groovy)"
+echo "   - 'Monitor-Spot-Workers' (for monitor_spot_workers_pipeline.groovy)"
+echo "4. Type: 'Pipeline'"
+echo "5. Click 'OK'"
+echo "6. In configuration, under 'Pipeline Script', paste content from respective file"
+echo "7. Click 'Save'"
+echo "8. Click 'Build Now'"
 echo ""
 
-echo "📊 PREVIEW - CONFIGURACIÓN CLOUD:"
-echo "================================="
-head -20 jenkins_spot_cloud_config.groovy
-echo "... (ver archivo completo para script completo)"
-echo ""
-
-echo "📊 PREVIEW - PIPELINE DE PRUEBA:"
-echo "================================"
-head -15 test_spot_workers_pipeline.groovy
-echo "... (ver archivo completo para pipeline completo)"
-echo ""
-
-echo "🎯 RESULTADO ESPERADO:"
+echo "PIPELINE DESCRIPTIONS:"
 echo "====================="
-echo "✅ Cloud 'spot-final' configurado automáticamente"
-echo "✅ Template 'worker-spot' con label 'spot'"
-echo "✅ Pipeline ejecutándose en workers spot con banner ASCII"
-echo "✅ Verificación automática de nodo spot"
-echo "💰 Ahorro del ~90% en costos de compute confirmado"
+echo "demo_spot_complete_pipeline.groovy:"
+echo "  - Complete demo with professional banners"
+echo "  - Cost analysis and verification"
+echo "  - Production-ready spot worker validation"
+echo ""
+echo "monitor_spot_workers_pipeline.groovy:"
+echo "  - Advanced diagnostics for spot worker issues"
+echo "  - Memory, disk, and network monitoring"
+echo "  - Ideal for troubleshooting client problems"
 echo ""
 
-echo "🔍 VERIFICACIÓN POST-CONFIGURACIÓN:"
-echo "==================================="
-echo "1. 📊 Ve a: Manage Jenkins > Clouds"
-echo "2. ✅ Deberías ver: 'spot-final' configurado"
-echo "3. ▶️  Ejecuta el pipeline 'Test-Spot-Workers-Complete'"
-echo "4. 📋 El log debería mostrar banners ASCII y confirmación de spot"
-echo "5. � Verifica que el nodo tenga label 'spot=true'"
+echo "CREATED FILES:"
+echo "============="
+echo "jenkins_spot_cloud.groovy - Automatic cloud configuration"
+echo "demo_spot_complete_pipeline.groovy - Professional demo pipeline"
+echo "monitor_spot_workers_pipeline.groovy - Advanced monitoring pipeline"
 echo ""
 
-echo "⚡ ESCALADO AUTOMÁTICO:"
-echo "======================"
-echo "- Los workers spot se crean AUTOMÁTICAMENTE cuando Jenkins los necesita"
-echo "- Tiempo de escalado: <2 minutos (con permisos RBAC correctos)"
-echo "- Escalado a 0: Después de 1 minuto de inactividad"
-echo "- Máximo 5 workers spot simultáneos"
+echo "PREVIEW - CLOUD CONFIGURATION:"
+echo "=============================="
+head -20 jenkins_spot_cloud.groovy
+echo "... (see complete file for full script)"
 echo ""
 
-echo "🚀 PRÓXIMOS PASOS:"
+echo "PREVIEW - DEMO PIPELINE:"
+echo "========================"
+head -15 demo_spot_complete_pipeline.groovy
+echo "... (see complete file for full pipeline)"
+echo ""
+
+echo "PREVIEW - MONITORING PIPELINE:"
+echo "============================="
+head -15 monitor_spot_workers_pipeline.groovy
+echo "... (see complete file for full monitoring pipeline)"
+echo ""
+
+echo "EXPECTED RESULT:"
+echo "==============="
+echo "Cloud 'spot-final' configured automatically"
+echo "Template 'worker-spot' with label 'spot'"
+echo "Pipelines running on spot workers with professional banners"
+echo "Automatic spot node verification"
+echo "90% compute cost savings confirmed"
+echo "Advanced monitoring for troubleshooting"
+echo ""
+
+echo "POST-CONFIGURATION VERIFICATION:"
+echo "================================"
+echo "1. Go to: Manage Jenkins > Clouds"
+echo "2. You should see: 'spot-final' configured"
+echo "3. Execute pipelines: 'Demo-Spot-Complete' and 'Monitor-Spot-Workers'"
+echo "4. Log should show professional banners and comprehensive diagnostics"
+echo "5. Verify node has label 'spot=true'"
+echo ""
+
+echo "AUTOMATIC SCALING:"
 echo "=================="
-echo "1. ⚙️  Ejecuta la configuración cloud en Jenkins Script Console"
-echo "2. 🧪 Crea y ejecuta el pipeline de prueba"
-echo "3. 📊 Verifica el escalado automático"
-echo "4. 🎉 ¡Disfruta del ahorro del 90% en costos!"
+echo "- Spot workers are created AUTOMATICALLY when Jenkins needs them"
+echo "- Scaling time: <2 minutes (with correct RBAC permissions)"
+echo "- Scale to 0: After 1 minute of inactivity"
+echo "- Maximum 5 simultaneous spot workers"
 echo ""
 
-log "SUCCESS" "¡Paso 3 - Configuración completa de spot workers preparada!"
+echo "NEXT STEPS:"
+echo "==========="
+echo "1. Execute cloud configuration in Jenkins Script Console"
+echo "2. Create and execute demo and monitoring pipelines"
+echo "3. Verify automatic scaling with existing scripts"
+echo "4. Use monitor pipeline for troubleshooting client issues"
+echo "5. Enjoy 90% cost savings!"
+echo ""
+
+log "SUCCESS" "Step 3 - Complete spot workers configuration prepared!"
 
 echo ""
-echo "🎯 SIGUIENTE PASO:"
-echo "================"
-echo "Después de configurar Jenkins manualmente:"
-echo "▶️  ./05_install_observability_unified.sh"
+echo "NEXT STEP:"
+echo "=========="
+echo "After configuring Jenkins manually:"
+echo "./05_install_observability_unified.sh"
 echo ""

@@ -1,5 +1,5 @@
 // demo_spot_complete_pipeline.groovy
-// Professional Jenkins pipeline demonstrating spot worker functionality
+// Jenkins pipeline demonstrating spot worker functionality
 // Comprehensive testing and validation pipeline for spot instances
 
 import jenkins.model.*
@@ -258,183 +258,6 @@ pipeline {
     }
 }
 '''
-        
-        stage('🔥 Power Check') {
-            steps {
-                script {
-                    echo ""
-                    echo "🔥 VERIFICANDO PODER DEL SPOT WORKER..."
-                    echo "======================================="
-                    
-                    // Tests básicos sin problemas de sintaxis
-                    sh 'echo "⚡ Test 1: Sistema base"'
-                    sh 'hostname'
-                    sh 'whoami'
-                    sh 'pwd'
-                    
-                    echo ""
-                    echo "🧠 Test 2: Verificando memoria..."
-                    sh 'echo "   Memoria disponible:"'
-                    sh 'head -3 /proc/meminfo || echo "Memoria: OK"'
-                    
-                    echo ""
-                    echo "🗂️ Test 3: Sistema de archivos..."
-                    sh 'echo "   Contenido del workspace:"'
-                    sh 'ls -la | head -5'
-                    
-                    echo ""
-                    echo "✅ ¡Todos los tests pasaron! El spot worker está en plena forma 💪"
-                }
-            }
-        }
-        
-        stage('🎨 Creación Artística') {
-            steps {
-                script {
-                    echo ""
-                    echo "🎨 CREANDO ARTE ASCII PERSONALIZADO..."
-                    echo "======================================"
-                    
-                    // Arte ASCII épico
-                    def art = """
-        🌟 HELLO WORLD FROM SPOT WORKER! 🌟
-        
-           ╭─────────────────────────────────╮
-           │  💰 AHORRO: 80-90% CONFIRMADO  │
-           │  ⚡ VELOCIDAD: ULTRA RÁPIDA    │
-           │  🎯 PRECISIÓN: SPOT ON!        │
-           │  🚀 ESTADO: COMPLETAMENTE ÉPICO │
-           ╰─────────────────────────────────╯
-           
-              ╭─○ ○─╮    ◄── Este soy yo, tu spot worker
-              │ ◡   │    corriendo a toda velocidad
-              ╰─────╯    
-              
-    ┌─┐┌─┐┌─┐┌┬┐  ┬ ┬┌─┐┬─┐┬┌─┌─┐┬─┐  ┌─┐┌─┐┬ ┬┌─┐┬─┐
-    └─┐├─┘│ │ │   ││││ │├┬┘├┴┐├┤ ├┬┘  ├─┘│ ││││├┤ ├┬┘
-    └─┘┴  └─┘ ┴   └┴┘└─┘┴└─┴ ┴└─┘┴└─  ┴  └─┘└┴┘└─┘┴└─
-    """
-                    
-                    echo art
-                    
-                    // Mensaje dinámico
-                    def mensajes = [
-                        "¡Los spot workers son increíbles! 🚀",
-                        "¡Ahorrando dinero como un jefe! 💰",
-                        "¡Kubernetes + Jenkins = Amor! ❤️",
-                        "¡Este pipeline está en otro nivel! 🔥",
-                        "¡Spot workers para la victoria! 🏆"
-                    ]
-                    
-                    def randomMsg = mensajes[new Random().nextInt(mensajes.size())]
-                    echo ""
-                    echo "💬 MENSAJE DEL DÍA: ${randomMsg}"
-                }
-            }
-        }
-        
-        stage('⚡ Demo de Velocidad') {
-            steps {
-                script {
-                    echo ""
-                    echo "⚡ DEMO DE VELOCIDAD SPOT WORKER..."
-                    echo "=================================="
-                    
-                    echo "🏃 Preparando carrera de velocidad..."
-                    
-                    // Demo de velocidad sin comandos problemáticos
-                    for (int i = 1; i <= 5; i++) {
-                        echo "🏁 Vuelta ${i}/5: Procesando a velocidad spot..."
-                        sh "echo '   📦 Procesando paquete ${i}...'"
-                        sh "sleep 1"
-                        echo "   ✅ Paquete ${i} completado en tiempo récord!"
-                    }
-                    
-                    echo ""
-                    echo "🏆 ¡VELOCIDAD SPOT CONFIRMADA!"
-                    echo "   - 5 procesos completados"
-                    echo "   - Tiempo total: ~5 segundos"
-                    echo "   - Eficiencia: MÁXIMA"
-                }
-            }
-        }
-        
-        stage('🎯 Finalización Épica') {
-            steps {
-                script {
-                    echo ""
-                    echo "🎯 PREPARANDO FINALIZACIÓN ÉPICA..."
-                    echo "==================================="
-                    
-                    def finalBanner = """
-╔═══════════════════════════════════════════════════════════════╗
-║                     🎉 MISIÓN CUMPLIDA 🎉                    ║
-║                                                               ║
-║  ✅ Spot Worker: FUNCIONANDO                                 ║
-║  ✅ Pipeline: EJECUTADO                                      ║
-║  ✅ Ahorro: 80-90% ACTIVADO                                  ║
-║  ✅ Velocidad: ULTRA RÁPIDA                                  ║
-║  ✅ Diversión: NIVEL MÁXIMO                                  ║
-║                                                               ║
-║           🚀 JENKINS + AKS + SPOT = PERFECCIÓN 🚀            ║
-╚═══════════════════════════════════════════════════════════════╝
-"""
-                    
-                    echo finalBanner
-                    
-                    echo ""
-                    echo "💫 ESTADÍSTICAS FINALES:"
-                    echo "   🎯 Worker usado: ${env.NODE_NAME}"
-                    echo "   ⏱️  Tiempo total: ~2 minutos"
-                    echo "   💰 Dinero ahorrado: 80-90%"
-                    echo "   😎 Nivel de coolness: ÉPICO"
-                    
-                    echo ""
-                    echo "🎊 ¡HELLO WORLD COMPLETADO CON ESTILO!"
-                    echo "   Este ha sido tu spot worker favorito 💖"
-                    echo "   ¡Nos vemos en el próximo pipeline! 👋"
-                }
-            }
-        }
-    }
-    
-    post {
-        always {
-            script {
-                echo ""
-                echo "🧹 LIMPIEZA POST-ÉPICA..."
-                echo "========================"
-                echo "✨ Todo limpio y ordenado"
-            }
-        }
-        success {
-            script {
-                echo ""
-                echo "🎊 ¡ÉXITO TOTAL Y ABSOLUTO! 🎊"
-                echo "==============================="
-                echo "🏆 Tu spot worker ha demostrado su poder"
-                echo "💎 Pipeline ejecutado con elegancia"
-                echo "🚀 Sistema funcionando perfectamente"
-                echo ""
-                echo "📢 PRÓXIMOS PASOS:"
-                echo "   - Crear más pipelines chulos"
-                echo "   - Disfrutar del ahorro del 80-90%"
-                echo "   - Presumir de tu setup épico"
-                echo ""
-                echo "🎯 ¡DISFRUTA TU JENKINS CON SPOT WORKERS! 🎯"
-            }
-        }
-        failure {
-            script {
-                echo ""
-                echo "😅 Algo no salió perfecto, pero no pasa nada"
-                echo "💪 Los spot workers nunca se rinden"
-                echo "🔧 Revisa los logs y vuelve a intentarlo"
-            }
-        }
-    }
-}
-'''
 
 job.setDefinition(new CpsFlowDefinition(pipelineScript, true))
 job.save()
@@ -442,8 +265,8 @@ job.save()
 println "Pipeline '${jobName}' created successfully"
 println ""
 println "Pipeline Characteristics:"
-println "  Professional spot worker demonstration"
-println "  Comprehensive system validation"
+println "  Comprehensive spot worker demonstration"
+println "  System validation and testing"
 println "  Performance testing included"
 println "  Resource utilization analysis"
 println "  Production-ready structure"
@@ -458,5 +281,4 @@ println ""
 
 jenkins.save()
 
-println "Professional spot worker pipeline ready for execution"
 println "Configured for production use with comprehensive testing"
