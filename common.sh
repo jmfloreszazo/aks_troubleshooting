@@ -1,31 +1,31 @@
 #!/bin/bash
 
-# common.sh - Funciones comunes
-# Parte del sistema AKS + Jenkins + Spot Workers
+# common.sh - Common functions
+# Part of AKS + Jenkins + Spot Workers system
 
-# Función para actualizar variables en .env.production
+# Function to update variables in .env.production
 update_env_var() {
     local var_name="$1"
     local var_value="$2"
     
     if [ -f .env.production ]; then
-        # Si la variable existe, actualizarla
+        # If variable exists, update it
         if grep -q "^${var_name}=" .env.production; then
             sed -i "s|^${var_name}=.*|${var_name}=${var_value}|" .env.production
         else
-            # Si no existe, añadirla
+            # If it doesn't exist, add it
             echo "${var_name}=${var_value}" >> .env.production
         fi
     else
-        # Si no existe .env.production, crearlo
+        # If .env.production doesn't exist, create it
         echo "${var_name}=${var_value}" > .env.production
     fi
 }
 
-# Función para mostrar estado
+# Function to show status
 show_status() {
-    echo "📊 ESTADO DEL SISTEMA"
-    echo "===================="
+    echo "SYSTEM STATUS"
+    echo "============="
     echo ""
     
     # Verificar cluster
