@@ -213,20 +213,120 @@ The system includes:
 
 ## System Architecture
 
+### Complete AKS Jenkins Spot Workers + Observability Architecture
+
+```mermaid
+graph TB
+    %% External Users
+    DevOps[👨‍💻 DevOps Engineer] --> |Build Jobs| JenkinsLB
+    Admin[👨‍💻 System Admin] --> |Monitoring| GrafanaLB
+    
+    %% Load Balancers
+    JenkinsLB[🌐 Jenkins LoadBalancer<br/>9.163.63.16:8080] --> JenkinsMaster
+    GrafanaLB[🌐 Grafana LoadBalancer<br/>4.175.33.237] --> GrafanaUI
+    
+    %% AKS Cluster Container
+    subgraph AKS["🚀 AKS Cluster - Multi-Node Pool Architecture"]
+        
+        %% System Node Pool
+        subgraph SystemPool["🔧 aks-system (System Pool)<br/>Standard_D2s_v3"]
+            K8sAPI[⚙️ Kubernetes API Server]
+            CoreDNS[🌐 CoreDNS]
+            KubeProxy[🔀 kube-proxy]
+            ETCD[💾 etcd]
+        end
+        
+        %% Regular Node Pool  
+        subgraph RegularPool["💪 aks-regular (Regular Pool)<br/>Standard_D4s_v3"]
+            JenkinsMaster[🏗️ Jenkins Master<br/>Stable & Persistent]
+            LokiSvc[📝 Loki Server<br/>Log Storage]
+            FluentBitReg[📤 Fluent Bit<br/>Log Collection]
+        end
+        
+        %% Spot Node Pool
+        subgraph SpotPool["💰 aks-spot (Spot Pool)<br/>Standard_D4s_v3 - 60-90% Cost Savings"]
+            JenkinsAgent1[🤖 Jenkins Agent Pod 1<br/>Dynamic Scaling]
+            JenkinsAgent2[🤖 Jenkins Agent Pod 2<br/>Dynamic Scaling]
+            JenkinsAgentN[🤖 Jenkins Agent Pod N<br/>Auto-provisioned]
+            FluentBitSpot[📤 Fluent Bit<br/>Tolerations for Spot]
+            NodeExporterSpot[📊 Node Exporter<br/>Spot Metrics]
+        end
+        
+        %% Monitoring Node Pool
+        subgraph MonitorPool["📊 aks-monitoring (Monitoring Pool)<br/>Standard_D4s_v3"]
+            GrafanaUI[📈 Grafana UI<br/>Unified Dashboard]
+            PromSvc[📊 Prometheus Server<br/>Metrics Storage]
+            AlertManager[🚨 AlertManager<br/>Notifications]
+            NodeExporter[📊 Node Exporter<br/>System Metrics]
+        end
+    end
+    
+    %% Data Flow - Logs
+    FluentBitReg --> |Ship Logs| LokiSvc
+    FluentBitSpot --> |Ship Logs| LokiSvc
+    JenkinsMaster --> |Master Logs| FluentBitReg
+    JenkinsAgent1 --> |Agent Logs| FluentBitSpot
+    JenkinsAgent2 --> |Agent Logs| FluentBitSpot
+    JenkinsAgentN --> |Agent Logs| FluentBitSpot
+    
+    %% Data Flow - Metrics
+    NodeExporterSpot --> |Node Metrics| PromSvc
+    NodeExporter --> |Node Metrics| PromSvc
+    K8sAPI --> |K8s Metrics| PromSvc
+    JenkinsMaster --> |App Metrics| PromSvc
+    
+    %% Monitoring Integration
+    LokiSvc --> |Logs Datasource| GrafanaUI
+    PromSvc --> |Metrics Datasource| GrafanaUI
+    PromSvc --> |Alert Rules| AlertManager
+    AlertManager --> |Notifications| Admin
+    
+    %% Jenkins Workflow
+    JenkinsMaster --> |Provision Agents| JenkinsAgent1
+    JenkinsMaster --> |Provision Agents| JenkinsAgent2  
+    JenkinsMaster --> |Provision Agents| JenkinsAgentN
+    JenkinsAgent1 --> |Build Results| JenkinsMaster
+    JenkinsAgent2 --> |Build Results| JenkinsMaster
+    JenkinsAgentN --> |Build Results| JenkinsMaster
+    
+    %% Spot Instance Management
+    Azure[☁️ Azure Spot Service] --> |Interrupt/Evict| SpotPool
+    SpotPool --> |Scale Events| AlertManager
+    
+    %% Styling
+    classDef systemNode fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef regularNode fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef spotNode fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef monitorNode fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef external fill:#ffebee,stroke:#c62828,stroke-width:2px
+    classDef loadbalancer fill:#f1f8e9,stroke:#33691e,stroke-width:3px
+    
+    class SystemPool,K8sAPI,CoreDNS,KubeProxy,ETCD systemNode
+    class RegularPool,JenkinsMaster,LokiSvc,FluentBitReg regularNode
+    class SpotPool,JenkinsAgent1,JenkinsAgent2,JenkinsAgentN,FluentBitSpot,NodeExporterSpot spotNode
+    class MonitorPool,GrafanaUI,PromSvc,AlertManager,NodeExporter monitorNode
+    class DevOps,Admin,Azure external
+    class JenkinsLB,GrafanaLB loadbalancer
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    AKS Cluster Architecture                  │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  [System Pool]     [Regular Pool]    [Spot Pool]    [Monitor Pool] │
-│  aks-system        aks-regular       aks-spot       aks-monitoring  │
-│  • K8s system     • Jenkins Master  • Jenkins      • Prometheus     │
-│  • CoreDNS         • Stable apps    • Workers      • Grafana        │
-│  • Kube-proxy      • Loki           • Cost-eff     • AlertManager   │
-│                    • Fluent Bit     • workloads    • Node Exporter  │
-│                                                                      │
-└─────────────────────────────────────────────────────────────┘
-```
+
+### Architecture Benefits
+
+| Component | Purpose | Node Pool | Cost Optimization |
+|-----------|---------|-----------|-------------------|
+| **Jenkins Master** | Build orchestration & UI | Regular (Stable) | High availability |
+| **Jenkins Agents** | Build execution | Spot (Cost-effective) | 60-90% cost savings |
+| **Grafana** | Unified monitoring UI | Monitoring (Dedicated) | Performance isolation |
+| **Prometheus** | Metrics collection | Monitoring (Dedicated) | Scalable storage |
+| **Loki** | Log aggregation | Regular (Persistent) | Reliable log storage |
+| **Fluent Bit** | Log collection | All pools | Universal coverage |
+
+### Data Flow Summary
+
+1. **Build Execution**: Jenkins Master → Spot Workers → Build Results
+2. **Log Collection**: All pods → Fluent Bit → Loki → Grafana  
+3. **Metrics Collection**: All nodes → Prometheus → Grafana
+4. **Alerting**: Prometheus → AlertManager → Notifications
+5. **Spot Management**: Azure → Spot Interruptions → Auto-scaling
 
 ---
 
