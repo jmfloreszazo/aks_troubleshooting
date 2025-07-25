@@ -558,9 +558,11 @@ create_logical_monitoring_dashboard() {
                     "type": "logs",
                     "targets": [
                         {
-                            "query": "{job=\"fluent-bit\"}",
+                            "expr": "{job=\"fluent-bit\"}",
                             "datasource": {"type": "loki", "uid": "'${LOKI_UID}'"},
-                            "refId": "A"
+                            "refId": "A",
+                            "maxLines": 1000,
+                            "resolution": 1
                         }
                     ],
                     "gridPos": {"h": 12, "w": 24, "x": 0, "y": 8},
@@ -579,7 +581,7 @@ create_logical_monitoring_dashboard() {
                     "type": "logs",
                     "targets": [
                         {
-                            "query": "{job=\"fluent-bit\", kubernetes_namespace_name=\"jenkins-master\"} |= \"jenkins\"",
+                            "expr": "{job=\"fluent-bit\", kubernetes_namespace_name=\"jenkins-master\"}",
                             "datasource": {"type": "loki", "uid": "'${LOKI_UID}'"},
                             "refId": "A"
                         }
@@ -599,7 +601,7 @@ create_logical_monitoring_dashboard() {
                     "type": "logs",
                     "targets": [
                         {
-                            "query": "{job=\"fluent-bit\"} |~ \"(?i)error|warning|warn|fail|exception\"",
+                            "expr": "{job=\"fluent-bit\"} |~ \"(?i)error|warning|warn|fail|exception\"",
                             "datasource": {"type": "loki", "uid": "'${LOKI_UID}'"}
                         }
                     ],
@@ -617,7 +619,7 @@ create_logical_monitoring_dashboard() {
                     "type": "logs",
                     "targets": [
                         {
-                            "query": "{job=\"fluent-bit\", kubernetes_namespace_name=\"kube-system\"}",
+                            "expr": "{job=\"fluent-bit\", kubernetes_namespace_name=\"kube-system\"}",
                             "datasource": {"type": "loki", "uid": "'${LOKI_UID}'"}
                         }
                     ],
@@ -654,7 +656,7 @@ create_logical_monitoring_dashboard() {
                             "refId": "A"
                         },
                         {
-                            "query": "rate({job=\"fluent-bit\"} |~ \"(?i)error|warning|fail\" [5m])",
+                            "expr": "rate({job=\"fluent-bit\"} |~ \"(?i)error|warning|fail\" [5m])",
                             "legendFormat": "Error Log Rate",
                             "datasource": {"type": "loki", "uid": "'${LOKI_UID}'"},
                             "refId": "B"
@@ -834,7 +836,7 @@ create_critical_alerts_dashboard() {
                     "type": "logs",
                     "targets": [
                         {
-                            "query": "{job=\"fluent-bit\"} |~ \"(?i)fatal|critical|panic|crash|oom\"",
+                            "expr": "{job=\"fluent-bit\"} |~ \"(?i)fatal|critical|panic|crash|oom|error\"",
                             "datasource": {"type": "loki", "uid": "'${LOKI_UID}'"}
                         }
                     ],
@@ -852,7 +854,7 @@ create_critical_alerts_dashboard() {
                     "type": "logs",
                     "targets": [
                         {
-                            "query": "{job=\"fluent-bit\"}",
+                            "expr": "{job=\"fluent-bit\"}",
                             "datasource": {"type": "loki", "uid": "'${LOKI_UID}'"}
                         }
                     ],
