@@ -170,36 +170,301 @@ The system includes:
 
 ## Access
 
-
-
-### Spot Instance Monitoring
-- **Interruption Tracking**: Spot instance lifecycle events
-- **Cost Efficiency**: Resource utilization comparison
-- **Reliability Metrics**: Availability and performance comparison
-- **Workload Impact**: Effect of spot interruptions on builds
-
-## Service Access URLs
-
 ### Jenkins Infrastructure
+
 - **Jenkins Master**: Available via LoadBalancer service
   - Username: `admin`
   - Password: `admin123`
   - **Features**: Spot workers configuration, pipeline automation
 
 ### Unified Observability (Single Grafana Instance)
+
 - **Grafana Dashboard**: Available via LoadBalancer service
   - Username: `admin`
   - Password: `admin123`
-  - **Features**: 
+  - **Features**:
     - Loki datasource (logs): 36 pre-configured queries
     - Prometheus datasource (metrics): Complete cluster metrics
     - Unified dashboards with both logs and metrics
 
 ### Backend Services (Internal Access Only)
+
 - **Prometheus Server**: Internal service only (accessed via Grafana)
 - **AlertManager**: Internal service only (accessed via Grafana)
 - **Loki Server**: Internal service only (accessed via Grafana)
   - **Features**: Optimized resource usage, single access point
+
+---
+
+## Jenkins Plugins Configuration
+
+This section provides detailed instructions for configuring essential Jenkins plugins that have been pre-installed in the cluster.
+
+### Role-Based Strategy Plugin Configuration
+
+The Role-Based Strategy plugin is pre-installed but requires manual configuration to define custom roles and permissions.
+
+#### Overview
+
+The Role-Based Strategy plugin allows you to:
+
+- Create custom roles with specific permissions
+- Assign users to roles for granular access control
+- Separate administrative tasks from operational tasks
+- Implement least-privilege security principles
+
+#### Step-by-Step Configuration
+
+##### 1. Enable Role-Based Authorization
+
+1. **Access Jenkins**: Navigate to `http://[JENKINS-LOADBALANCER-IP]:8080`
+2. **Login** with credentials:
+   - Username: `admin`
+   - Password: `admin`
+3. **Navigate to Security Settings**:
+   - Click **"Manage Jenkins"**
+   - Click **"Configure Global Security"**
+4. **Enable Role-Based Strategy**:
+   - In the **"Authorization"** section
+   - Select **"Role-Based Strategy"**
+   - Click **"Save"**
+
+##### 2. Create Custom Roles
+
+After enabling Role-Based Strategy, you'll see a new option in the Jenkins management menu:
+
+1. **Access Role Management**:
+   - Go to **"Manage Jenkins"**
+   - Click **"Manage and Assign Roles"**
+   - Click **"Manage Roles"**
+
+2. **Define Global Roles**:
+
+   **Administrator Role**:
+
+   ```text
+   Role Name: administrators
+   Permissions: 
+   - Overall/Administer (full access)
+   ```
+
+   **Developer Role**:
+
+   ```text
+   Role Name: developers
+   Permissions:
+   - Overall/Read
+   - Job/Build
+   - Job/Cancel
+   - Job/Read
+   - Job/Workspace
+   - View/Read
+   ```
+
+   **Operator Role**:
+
+   ```text
+   Role Name: operators
+   Permissions:
+   - Overall/Read
+   - Job/Build
+   - Job/Cancel
+   - Job/Read
+   - Job/Create
+   - Job/Configure
+   - Job/Delete
+   - View/Read
+   - View/Configure
+   - View/Create
+   - View/Delete
+   ```
+
+   **Read-Only Role**:
+
+   ```text
+   Role Name: viewers
+   Permissions:
+   - Overall/Read
+   - Job/Read
+   - View/Read
+   ```
+
+3. **Click "Save"** to create the roles
+
+##### 3. Create Project-Specific Roles (Optional)
+
+For project-based access control:
+
+1. **In the "Project roles" section**:
+
+   ```text
+   Role Name: project-team-alpha
+   Pattern: alpha-.*
+   Permissions:
+   - Job/Build
+   - Job/Cancel
+   - Job/Configure
+   - Job/Read
+   - Job/Workspace
+   ```
+
+2. **Create additional project roles** as needed for different teams
+
+##### 4. Assign Users to Roles
+
+1. **Navigate to Role Assignment**:
+   - Go to **"Manage Jenkins"**
+   - Click **"Manage and Assign Roles"**
+   - Click **"Assign Roles"**
+
+2. **Add Users to Global Roles**:
+
+   ```text
+   Global roles:
+   - administrators: admin
+   - developers: developer1, developer2
+   - operators: ops-team, ci-cd-user
+   - viewers: stakeholder1, manager1
+   ```
+
+3. **Add Users to Project Roles** (if configured):
+
+   ```text
+   Project roles:
+   - project-team-alpha: alpha-dev1, alpha-dev2
+   ```
+
+4. **Click "Save"** to apply the assignments
+
+#### Example Role Configurations
+
+##### Complete Development Team Setup
+
+```yaml
+# Global Roles Configuration
+administrators:
+  users: [admin, lead-admin]
+  permissions: [Overall/Administer]
+
+senior-developers:
+  users: [senior-dev1, senior-dev2]
+  permissions:
+    - Overall/Read
+    - Job/Build, Job/Cancel, Job/Configure, Job/Create, Job/Delete, Job/Read, Job/Workspace
+    - View/Read, View/Configure, View/Create, View/Delete
+    - Credentials/View
+
+developers:
+  users: [dev1, dev2, dev3]
+  permissions:
+    - Overall/Read
+    - Job/Build, Job/Cancel, Job/Read, Job/Workspace
+    - View/Read
+
+qa-team:
+  users: [qa1, qa2]
+  permissions:
+    - Overall/Read
+    - Job/Build, Job/Cancel, Job/Read
+    - View/Read
+
+# Project Roles Configuration
+frontend-team:
+  pattern: "frontend-.*"
+  users: [frontend-dev1, frontend-dev2]
+  permissions: [Job/Build, Job/Cancel, Job/Configure, Job/Read]
+
+backend-team:
+  pattern: "backend-.*|api-.*"
+  users: [backend-dev1, backend-dev2]
+  permissions: [Job/Build, Job/Cancel, Job/Configure, Job/Read, Job/Create]
+```
+
+#### Security Best Practices
+
+1. **Principle of Least Privilege**:
+   - Grant minimum permissions required for each role
+   - Regularly review and audit user permissions
+
+2. **Role Naming Convention**:
+
+   ```text
+   Global roles: team-function (e.g., dev-team, ops-team)
+   Project roles: project-team (e.g., alpha-dev, beta-ops)
+   ```
+
+3. **Regular Permission Audits**:
+   - Review role assignments monthly
+   - Remove unused accounts
+   - Update permissions based on team changes
+
+4. **Project Pattern Examples**:
+
+   ```text
+   Frontend projects: "frontend-.*|ui-.*"
+   Backend projects: "backend-.*|api-.*|service-.*"
+   Infrastructure: "infra-.*|deploy-.*"
+   Testing: "test-.*|qa-.*"
+   ```
+
+#### Troubleshooting Role-Based Strategy
+
+##### Common Issues:
+
+1. **Plugin Not Visible**:
+   - Verify plugin installation: Go to **"Manage Jenkins"** → **"Plugins"** → **"Installed"**
+   - Look for **"Role-based Authorization Strategy"**
+   - Restart Jenkins if necessary
+
+2. **Users Cannot Access Jobs**:
+   - Check role assignments in **"Assign Roles"**
+   - Verify project patterns match job names
+   - Ensure users have the necessary global permissions
+
+3. **Permission Denied Errors**:
+   - Review the specific permissions required for the action
+   - Check both global and project role permissions
+   - Verify user is assigned to appropriate roles
+
+##### Verification Commands:
+
+```bash
+# Check if plugin is installed
+kubectl exec jenkins-master-0 -n jenkins-master -c jenkins -- ls -la /var/jenkins_home/plugins/ | grep role
+
+# Restart Jenkins if needed
+kubectl delete pod jenkins-master-0 -n jenkins-master
+
+# Check Jenkins logs for permission errors
+kubectl logs jenkins-master-0 -n jenkins-master -c jenkins | grep -i "permission\|role\|access"
+```
+
+#### Integration with Spot Workers
+
+When configuring roles for spot worker environments:
+
+1. **Spot Worker Permissions**:
+
+   ```text
+   Role: spot-workers-operators
+   Permissions:
+   - Overall/Read
+   - Job/Build, Job/Cancel
+   - Computer/Build (for spot workers)
+   - Computer/Connect, Computer/Disconnect
+   ```
+
+2. **Cost Optimization Roles**:
+
+   ```text
+   Role: cost-analysts
+   Permissions:
+   - Overall/Read
+   - Job/Read
+   - Computer/Build (read-only access to worker metrics)
+   ```
+
+This role-based configuration ensures secure access management while maintaining the cost benefits of spot worker infrastructure.
 
 ---
 

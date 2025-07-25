@@ -43,7 +43,7 @@ controller:
     username: admin
     password: admin
 
-    # Plugins esenciales incluye Kubernetes para workers spot
+  # Plugins esenciales incluye Kubernetes para workers spot
   installPlugins:
     - kubernetes
     - workflow-aggregator
