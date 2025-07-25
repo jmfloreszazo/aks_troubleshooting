@@ -47,7 +47,7 @@ pipeline {
                     echo "SPOT WORKERS HEALTH MONITORING - BUILD #${buildNum}"
                     echo "============================================"
                     echo ""
-                    echo "🔍 DIAGNOSTIC INFORMATION:"
+                    echo "DIAGNOSTIC INFORMATION:"
                     echo "  Start Time: ${startTime.format('yyyy-MM-dd HH:mm:ss')}"
                     echo "  Node Name: ${nodeName}"
                     echo "  Build Number: ${buildNum}"
@@ -56,7 +56,7 @@ pipeline {
                     echo ""
                     
                     // Detailed Pod/Node Analysis for troubleshooting
-                    echo "🏷️  POD/NODE DIAGNOSTIC:"
+                    echo "POD/NODE DIAGNOSTIC:"
                     sh """
                         echo "  Hostname: \\$(hostname)"
                         echo "  Pod Name: \\$(hostname)"
@@ -68,148 +68,148 @@ pipeline {
                         UPTIME_HOURS=\\$((UPTIME_MINUTES / 60))
                         
                         if [ "\\$UPTIME_SECONDS" -lt 60 ]; then
-                            echo "  🆕 Pod Status: FRESHLY CREATED (\\${UPTIME_SECONDS}s ago)"
-                            echo "  ⚠️  WARNING: Very new pod - possible recent restart/eviction"
+                            echo "  Pod Status: FRESHLY CREATED (\\${UPTIME_SECONDS}s ago)"
+                            echo "  WARNING: Very new pod - possible recent restart/eviction"
                         elif [ "\\$UPTIME_SECONDS" -lt 300 ]; then
-                            echo "  ✨ Pod Status: RECENTLY CREATED (\\${UPTIME_MINUTES}m ago)"
-                            echo "  ℹ️  INFO: Pod started recently - monitor for stability"
+                            echo "  Pod Status: RECENTLY CREATED (\\${UPTIME_MINUTES}m ago)"
+                            echo "  INFO: Pod started recently - monitor for stability"
                         elif [ "\\$UPTIME_SECONDS" -lt 3600 ]; then
-                            echo "  ♻️  Pod Status: STABLE REUSE (\\${UPTIME_MINUTES}m uptime)"
-                            echo "  ✅ GOOD: Pod is stable and reusable"
+                            echo "  Pod Status: STABLE REUSE (\\${UPTIME_MINUTES}m uptime)"
+                            echo "  GOOD: Pod is stable and reusable"
                         else
-                            echo "  🔄 Pod Status: LONG RUNNING (\\${UPTIME_HOURS}h uptime)"
-                            echo "  ✅ EXCELLENT: Very stable pod"
+                            echo "  Pod Status: LONG RUNNING (\\${UPTIME_HOURS}h uptime)"
+                            echo "  EXCELLENT: Very stable pod"
                         fi
                         
-                        echo "  📊 Uptime Details: \\$(uptime)"
+                        echo "  Uptime Details: \\$(uptime)"
                     """
                     
                     echo ""
-                    echo "🔧 SYSTEM HEALTH DIAGNOSTIC:"
+                    echo "SYSTEM HEALTH DIAGNOSTIC:"
                     sh """
                         # Memory pressure check
                         MEMORY_USED=\\$(free | grep Mem | awk '{printf "%.0f", \\$3/\\$2 * 100}')
-                        echo "  💾 Memory Usage: \\${MEMORY_USED}%"
+                        echo "  Memory Usage: \\${MEMORY_USED}%"
                         if [ "\\$MEMORY_USED" -gt 90 ]; then
-                            echo "  🚨 CRITICAL: High memory usage - possible OOM kill risk"
+                            echo "  CRITICAL: High memory usage - possible OOM kill risk"
                         elif [ "\\$MEMORY_USED" -gt 70 ]; then
-                            echo "  ⚠️  WARNING: Elevated memory usage"
+                            echo "  WARNING: Elevated memory usage"
                         else
-                            echo "  ✅ GOOD: Memory usage normal"
+                            echo "  GOOD: Memory usage normal"
                         fi
                         
                         # Disk pressure check
                         DISK_USED=\\$(df / | tail -1 | awk '{print \\$5}' | sed 's/%//')
-                        echo "  💽 Disk Usage: \\${DISK_USED}%"
+                        echo "  Disk Usage: \\${DISK_USED}%"
                         if [ "\\$DISK_USED" -gt 90 ]; then
-                            echo "  🚨 CRITICAL: Disk almost full - pod eviction risk"
+                            echo "  CRITICAL: Disk almost full - pod eviction risk"
                         elif [ "\\$DISK_USED" -gt 80 ]; then
-                            echo "  ⚠️  WARNING: High disk usage"
+                            echo "  WARNING: High disk usage"
                         else
-                            echo "  ✅ GOOD: Disk usage normal"
+                            echo "  GOOD: Disk usage normal"
                         fi
                         
                         # Load average check
                         LOAD=\\$(uptime | awk -F'load average:' '{print \\$2}' | awk '{print \\$1}' | sed 's/,//')
-                        echo "  ⚡ Load Average: \\$LOAD"
+                        echo "  Load Average: \\$LOAD"
                         
                         # CPU count for context
                         CPU_COUNT=\\$(nproc)
-                        echo "  🖥️  CPU Cores: \\$CPU_COUNT"
+                        echo "  CPU Cores: \\$CPU_COUNT"
                         
                         # Check if load is high relative to CPU count
                         if command -v bc >/dev/null 2>&1; then
                             LOAD_RATIO=\\$(echo "\\$LOAD / \\$CPU_COUNT" | bc -l | awk '{printf "%.2f", \\$0}')
-                            echo "  📈 Load/CPU Ratio: \\$LOAD_RATIO"
+                            echo "  Load/CPU Ratio: \\$LOAD_RATIO"
                         fi
                     """
                     
                     echo ""
-                    echo "🌐 NETWORK CONNECTIVITY TEST:"
+                    echo "NETWORK CONNECTIVITY TEST:"
                     sh """
                         # Test internal cluster connectivity
-                        echo "  🔗 Testing cluster DNS..."
+                        echo "  Testing cluster DNS..."
                         if nslookup kubernetes.default.svc.cluster.local >/dev/null 2>&1; then
-                            echo "  ✅ GOOD: Cluster DNS resolution working"
+                            echo "  GOOD: Cluster DNS resolution working"
                         else
-                            echo "  🚨 CRITICAL: Cluster DNS resolution failed"
+                            echo "  CRITICAL: Cluster DNS resolution failed"
                         fi
                         
                         # Test external connectivity
-                        echo "  🌍 Testing external connectivity..."
+                        echo "  Testing external connectivity..."
                         if ping -c 1 -W 3 8.8.8.8 >/dev/null 2>&1; then
-                            echo "  ✅ GOOD: External network connectivity OK"
+                            echo "  GOOD: External network connectivity OK"
                         else
-                            echo "  ⚠️  WARNING: External connectivity issues"
+                            echo "  WARNING: External connectivity issues"
                         fi
                         
                         # Test Jenkins master connectivity
-                        echo "  🏗️  Testing Jenkins master connectivity..."
+                        echo "  Testing Jenkins master connectivity..."
                         if [ -n "\\$JENKINS_URL" ]; then
                             if curl -s --connect-timeout 5 "\\$JENKINS_URL" >/dev/null 2>&1; then
-                                echo "  ✅ GOOD: Jenkins master reachable"
+                                echo "  GOOD: Jenkins master reachable"
                             else
-                                echo "  🚨 CRITICAL: Cannot reach Jenkins master"
+                                echo "  CRITICAL: Cannot reach Jenkins master"
                             fi
                         else
-                            echo "  ℹ️  INFO: JENKINS_URL not set, skipping test"
+                            echo "  INFO: JENKINS_URL not set, skipping test"
                         fi
                     """
                     
                     echo ""
-                    echo "☸️  KUBERNETES ENVIRONMENT CHECK:"
+                    echo "KUBERNETES ENVIRONMENT CHECK:"
                     sh """
                         if [ -n "\\$KUBERNETES_SERVICE_HOST" ]; then
-                            echo "  🎯 Environment: Kubernetes Pod"
-                            echo "  🏠 Service Host: \\$KUBERNETES_SERVICE_HOST"
-                            echo "  📦 Namespace: \\${KUBERNETES_NAMESPACE:-default}"
-                            echo "  🎫 Service Account: \\$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace 2>/dev/null || echo 'Not available')"
+                            echo "  Environment: Kubernetes Pod"
+                            echo "  Service Host: \\$KUBERNETES_SERVICE_HOST"
+                            echo "  Namespace: \\${KUBERNETES_NAMESPACE:-default}"
+                            echo "  Service Account: \\$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace 2>/dev/null || echo 'Not available')"
                             
                             # Check for spot instance annotations/labels
-                            echo "  💰 Checking spot instance indicators..."
+                            echo "  Checking spot instance indicators..."
                             if [ -f /proc/cpuinfo ]; then
-                                echo "  🔍 Instance type detection attempted"
+                                echo "  Instance type detection attempted"
                             fi
                             
                             # Check for Azure spot instance metadata if available
                             if command -v curl >/dev/null 2>&1; then
                                 SPOT_CHECK=\\$(curl -s -H "Metadata:true" "http://169.254.169.254/metadata/instance/compute/priority?api-version=2021-02-01" 2>/dev/null || echo "unknown")
                                 if [ "\\$SPOT_CHECK" = "Spot" ]; then
-                                    echo "  💸 ✅ CONFIRMED: Running on Azure Spot Instance"
+                                    echo "  CONFIRMED: Running on Azure Spot Instance"
                                 elif [ "\\$SPOT_CHECK" = "Regular" ]; then
-                                    echo "  💰 ℹ️  INFO: Running on Regular Instance (not spot)"
+                                    echo "  INFO: Running on Regular Instance (not spot)"
                                 else
-                                    echo "  🤷 INFO: Spot status unknown (metadata not available)"
+                                    echo "  INFO: Spot status unknown (metadata not available)"
                                 fi
                             fi
                         else
-                            echo "  🖥️  Environment: Standalone or Docker"
-                            echo "  ⚠️  WARNING: Not running in Kubernetes - unexpected for spot workers"
+                            echo "  Environment: Standalone or Docker"
+                            echo "  WARNING: Not running in Kubernetes - unexpected for spot workers"
                         fi
                     """
                     
                     echo ""
-                    echo "🔄 SPOT WORKER STABILITY TEST:"
+                    echo "SPOT WORKER STABILITY TEST:"
                     
                     // Test worker responsiveness with small tasks
                     for (int i = 1; i <= 3; i++) {
-                        echo "  📋 Running stability test ${i}/3..."
+                        echo "  Running stability test ${i}/3..."
                         sh "echo '    Test ${i}: Basic command execution' && sleep 1"
                         sh "echo '    Test ${i}: File system write test' && echo 'test' > /tmp/spot_test_${i}.txt && rm -f /tmp/spot_test_${i}.txt"
-                        echo "    ✅ Test ${i} completed successfully"
+                        echo "    Test ${i} completed successfully"
                     }
                     
                     def endTime = new Date()
                     def duration = (endTime.time - startTime.time) / 1000
                     
                     echo ""
-                    echo "📊 MONITORING SUMMARY:"
-                    echo "  ⏰ End Time: ${endTime.format('yyyy-MM-dd HH:mm:ss')}"
-                    echo "  ⏱️  Total Duration: ${duration} seconds"
-                    echo "  🎯 Worker Status: RESPONDING ✅"
-                    echo "  📅 Next Check: ${new Date(endTime.time + 300000).format('HH:mm:ss')} (in 5 min)"
+                    echo "MONITORING SUMMARY:"
+                    echo "  End Time: ${endTime.format('yyyy-MM-dd HH:mm:ss')}"
+                    echo "  Total Duration: ${duration} seconds"
+                    echo "  Worker Status: RESPONDING"
+                    echo "  Next Check: ${new Date(endTime.time + 300000).format('HH:mm:ss')} (in 5 min)"
                     echo ""
-                    echo "🏁 DIAGNOSTIC RESULT: SPOT WORKER HEALTHY"
+                    echo "DIAGNOSTIC RESULT: SPOT WORKER HEALTHY"
                     echo "============================================"
                 }
             }
@@ -225,29 +225,29 @@ pipeline {
             steps {
                 script {
                     echo ""
-                    echo "🏋️  EXTENDED PERFORMANCE TEST (Every 30 min)"
+                    echo "EXTENDED PERFORMANCE TEST (Every 30 min)"
                     echo "============================================"
                     
                     sh """
-                        echo "  🧪 Running CPU stress test..."
+                        echo "  Running CPU stress test..."
                         timeout 10 yes > /dev/null &
                         CPU_PID=\\$!
                         sleep 5
                         kill \\$CPU_PID 2>/dev/null || true
-                        echo "  ✅ CPU stress test completed"
+                        echo "  CPU stress test completed"
                         
-                        echo "  🧪 Running memory allocation test..."
+                        echo "  Running memory allocation test..."
                         timeout 5 dd if=/dev/zero of=/tmp/memory_test bs=1M count=50 2>/dev/null || true
                         rm -f /tmp/memory_test 2>/dev/null || true
-                        echo "  ✅ Memory test completed"
+                        echo "  Memory test completed"
                         
-                        echo "  🧪 Running I/O stress test..."
+                        echo "  Running I/O stress test..."
                         timeout 5 dd if=/dev/zero of=/tmp/io_test bs=1M count=100 2>/dev/null || true
                         rm -f /tmp/io_test 2>/dev/null || true
-                        echo "  ✅ I/O test completed"
+                        echo "  I/O test completed"
                     """
                     
-                    echo "  🎯 RESULT: Spot worker survived stress test"
+                    echo "  RESULT: Spot worker survived stress test"
                     echo "============================================"
                 }
             }
@@ -260,7 +260,7 @@ pipeline {
                 def currentTime = new Date()
                 def nodeName = env.NODE_NAME ?: "Unknown"
                 echo ""
-                echo "📋 MONITORING CYCLE COMPLETED"
+                echo "MONITORING CYCLE COMPLETED"
                 echo "============================================"
                 echo "Next spot worker health check in 5 minutes"
                 echo "Continuous monitoring active for spot stability"
@@ -271,9 +271,9 @@ pipeline {
                 def currentTime = new Date()
                 def nodeName = env.NODE_NAME ?: "Unknown"
                 echo ""
-                echo "✅ SUCCESS - ${currentTime.format('HH:mm:ss')} - Pod: ${nodeName}"
-                echo "🎯 Spot worker is healthy and responsive"
-                echo "💰 Cost optimization functioning correctly"
+                echo "SUCCESS - ${currentTime.format('HH:mm:ss')} - Pod: ${nodeName}"
+                echo "Spot worker is healthy and responsive"
+                echo "Cost optimization functioning correctly"
             }
         }
         failure {
@@ -281,8 +281,8 @@ pipeline {
                 def currentTime = new Date()
                 def nodeName = env.NODE_NAME ?: "Unknown"
                 echo ""
-                echo "❌ FAILURE - ${currentTime.format('HH:mm:ss')} - Pod: ${nodeName}"
-                echo "🚨 SPOT WORKER ISSUE DETECTED"
+                echo "FAILURE - ${currentTime.format('HH:mm:ss')} - Pod: ${nodeName}"
+                echo "SPOT WORKER ISSUE DETECTED"
                 echo "============================================"
                 echo "TROUBLESHOOTING STEPS:"
                 echo "1. Check if spot instances are being evicted by Azure"
@@ -299,8 +299,8 @@ pipeline {
                 def currentTime = new Date()
                 def nodeName = env.NODE_NAME ?: "Unknown"
                 echo ""
-                echo "⚠️  UNSTABLE - ${currentTime.format('HH:mm:ss')} - Pod: ${nodeName}"
-                echo "🔍 Spot worker showing signs of instability"
+                echo "UNSTABLE - ${currentTime.format('HH:mm:ss')} - Pod: ${nodeName}"
+                echo "Spot worker showing signs of instability"
                 echo "Monitor next execution for potential issues"
             }
         }
@@ -313,18 +313,18 @@ job.save()
 
 println "Advanced Spot Worker Monitoring pipeline '${jobName}' created successfully"
 println ""
-println "🔍 DIAGNOSTIC CAPABILITIES:"
-println "  ✅ Pod lifecycle detection (new/reused/long-running)"
-println "  ✅ Memory pressure monitoring (OOM kill prevention)"
-println "  ✅ Disk usage monitoring (eviction prevention)"
-println "  ✅ Network connectivity testing (cluster + external)"
-println "  ✅ Azure spot instance verification"
-println "  ✅ Jenkins master connectivity check"
-println "  ✅ Kubernetes environment validation"
-println "  ✅ Worker stability testing"
-println "  ✅ Performance stress testing (every 30 min)"
+println "DIAGNOSTIC CAPABILITIES:"
+println "  Pod lifecycle detection (new/reused/long-running)"
+println "  Memory pressure monitoring (OOM kill prevention)"
+println "  Disk usage monitoring (eviction prevention)"
+println "  Network connectivity testing (cluster + external)"
+println "  Azure spot instance verification"
+println "  Jenkins master connectivity check"
+println "  Kubernetes environment validation"
+println "  Worker stability testing"
+println "  Performance stress testing (every 30 min)"
 println ""
-println "🚨 TROUBLESHOOTING FEATURES:"
+println "TROUBLESHOOTING FEATURES:"
 println "  - Detects spot instance evictions"
 println "  - Identifies resource pressure issues"
 println "  - Monitors pod restart patterns"
@@ -332,14 +332,14 @@ println "  - Tests network connectivity problems"
 println "  - Validates worker responsiveness"
 println "  - Provides actionable error messages"
 println ""
-println "📊 MONITORING CONFIGURATION:"
+println "MONITORING CONFIGURATION:"
 println "  Execution Schedule: Every 5 minutes (cron: */5 * * * *)"
 println "  Target: Spot workers (nodepool=spot)"
 println "  Timeout: 2 minutes per execution"
 println "  Build History: Last 50 executions"
 println "  Stress Tests: Every 30 minutes"
 println ""
-println "🎯 CLIENT ISSUE DETECTION:"
+println "CLIENT ISSUE DETECTION:"
 println "  This pipeline will help identify:"
 println "  - Why spot workers are falling down"
 println "  - When spot instances get evicted"
