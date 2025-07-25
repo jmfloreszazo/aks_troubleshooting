@@ -1,0 +1,68 @@
+# Configuración de Tempo corregida para este cluster AKS
+# =====================================================
+
+# Basic Tempo configuration
+tempo:
+  # Use simple local storage for testing
+  storage:
+    trace:
+      backend: local
+      local:
+        path: /var/tempo/traces
+  
+  # Server configuration
+  server:
+    http_listen_port: 3200
+    grpc_listen_port: 9095
+  
+  # Distributor configuration for OTLP ingestion
+  distributor:
+    receivers:
+      otlp:
+        protocols:
+          http:
+            endpoint: 0.0.0.0:4318
+          grpc:
+            endpoint: 0.0.0.0:4317
+
+# Pod configuration - CRITICAL: Add tolerations for nodepool
+tolerations:
+  - key: "jenkins"
+    operator: "Equal"
+    value: "master"
+    effect: "NoSchedule"
+  - key: "nodepool"
+    operator: "Equal"
+    value: "regular"
+    effect: "NoSchedule"
+
+# Node selector to use regular nodes (not spot)
+nodeSelector:
+  agentpool: regular
+
+# Basic resource configuration
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 1Gi
+
+# Simple service configuration
+service:
+  type: ClusterIP
+  port: 3200
+
+# Basic persistence
+persistence:
+  enabled: true
+  size: 2Gi
+
+# Enable service monitor for Prometheus
+serviceMonitor:
+  enabled: true
+
+# Ingress disabled for now
+ingress:
+  enabled: false

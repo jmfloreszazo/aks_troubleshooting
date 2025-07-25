@@ -1,0 +1,207 @@
+# Jenkins OpenTelemetry Instrumentation Configuration
+# ====================================================
+
+# Jenkins Master configuration with OpenTelemetry
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jenkins-otel-config
+  namespace: jenkins-master
+data:
+  # OpenTelemetry Java Agent configuration
+  otel-config.properties: |
+    # Service identification
+    otel.service.name=jenkins-master
+    otel.service.version=2.504.3
+    otel.service.namespace=jenkins
+    
+    # Resource attributes
+    otel.resource.attributes=service.name=jenkins-master,service.version=2.504.3,deployment.environment=production,k8s.cluster.name=aks-cluster
+    
+    # Exporter configuration - send to Tempo
+    otel.traces.exporter=jaeger
+    otel.exporter.jaeger.endpoint=http://tempo:14250
+    otel.exporter.jaeger.timeout=10s
+    
+    # Alternative: OTLP exporter
+    # otel.traces.exporter=otlp
+    # otel.exporter.otlp.traces.endpoint=http://tempo:4317
+    # otel.exporter.otlp.traces.protocol=grpc
+    
+    # Metrics configuration
+    otel.metrics.exporter=prometheus
+    otel.exporter.prometheus.port=9464
+    
+    # Logging configuration
+    otel.logs.exporter=none
+    
+    # Sampling configuration
+    otel.traces.sampler=probability
+    otel.traces.sampler.arg=1.0
+    
+    # Instrumentation configuration
+    otel.instrumentation.http.capture-headers.client.request=content-type,authorization
+    otel.instrumentation.http.capture-headers.client.response=content-type
+    otel.instrumentation.http.capture-headers.server.request=content-type,user-agent
+    otel.instrumentation.http.capture-headers.server.response=content-type
+    
+    # Jenkins-specific instrumentation
+    otel.instrumentation.jenkins.enabled=true
+    otel.instrumentation.jenkins.capture-build-logs=true
+    otel.instrumentation.jenkins.capture-build-parameters=true
+    otel.instrumentation.jenkins.capture-console-logs=false
+    
+    # Kubernetes attributes
+    otel.instrumentation.kubernetes-attributes.enabled=true
+    
+    # JVM instrumentation
+    otel.instrumentation.jvm-metrics.enabled=true
+    otel.instrumentation.runtime-metrics.enabled=true
+    
+    # Propagation configuration
+    otel.propagators=tracecontext,baggage,jaeger
+    
+    # Debug (disable in production)
+    # otel.javaagent.debug=true
+
+  # Jenkins plugins configuration for OpenTelemetry
+  jenkins-otel-plugin.xml: |
+    <?xml version='1.1' encoding='UTF-8'?>
+    <io.jenkins.plugins.opentelemetry.JenkinsOpenTelemetryPluginConfiguration plugin="opentelemetry@1.25.0">
+      <endpoint>http://tempo:4317</endpoint>
+      <exportTimeout>30</exportTimeout>
+      <authentication>
+        <type>noAuthentication</type>
+      </authentication>
+      <observabilityBackends>
+        <io.jenkins.plugins.opentelemetry.backend.JaegerBackend>
+          <name>Jaeger</name>
+          <jaegerBaseUrl>http://tempo:16686</jaegerBaseUrl>
+        </io.jenkins.plugins.opentelemetry.backend.JaegerBackend>
+        <io.jenkins.plugins.opentelemetry.backend.GrafanaBackend>
+          <name>Grafana</name>
+          <grafanaBaseUrl>http://135.236.73.36</grafanaBaseUrl>
+        </io.jenkins.plugins.opentelemetry.backend.GrafanaBackend>
+      </observabilityBackends>
+      <configurationProperties>
+        <entry>
+          <string>otel.instrumentation.jenkins.pipeline.capture-build-logs</string>
+          <string>true</string>
+        </entry>
+        <entry>
+          <string>otel.instrumentation.jenkins.pipeline.capture-parameters</string>
+          <string>true</string>
+        </entry>
+        <entry>
+          <string>otel.instrumentation.jenkins.agent.capture-logs</string>
+          <string>true</string>
+        </entry>
+      </configurationProperties>
+    </io.jenkins.plugins.opentelemetry.JenkinsOpenTelemetryPluginConfiguration>
+
+---
+# Jenkins Master Deployment with OpenTelemetry
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: jenkins-master-with-tracing
+  namespace: jenkins-master
+spec:
+  serviceName: jenkins-master
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jenkins-master
+  template:
+    metadata:
+      labels:
+        app: jenkins-master
+      annotations:
+        # OpenTelemetry auto-instrumentation
+        instrumentation.opentelemetry.io/inject-java: "true"
+        instrumentation.opentelemetry.io/container-names: "jenkins"
+    spec:
+      serviceAccountName: jenkins-master
+      securityContext:
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: jenkins
+        image: jenkins/jenkins:2.504.3-jdk21
+        ports:
+        - containerPort: 8080
+          name: http
+        - containerPort: 50000
+          name: agent
+        - containerPort: 9464
+          name: metrics
+        env:
+        # OpenTelemetry configuration
+        - name: JAVA_OPTS
+          value: |
+            -javaagent:/opt/opentelemetry/opentelemetry-javaagent.jar
+            -Dotel.javaagent.configuration-file=/etc/otel/otel-config.properties
+            -Djenkins.install.runSetupWizard=false
+            -Dhudson.model.ParametersAction.safeParameters=.*
+        - name: OTEL_SERVICE_NAME
+          value: "jenkins-master"
+        - name: OTEL_RESOURCE_ATTRIBUTES
+          value: "service.name=jenkins-master,k8s.pod.name=$(POD_NAME),k8s.namespace.name=$(POD_NAMESPACE)"
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+              
+        volumeMounts:
+        - name: jenkins-home
+          mountPath: /var/jenkins_home
+        - name: otel-config
+          mountPath: /etc/otel
+        - name: opentelemetry-agent
+          mountPath: /opt/opentelemetry
+          
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 2Gi
+          limits:
+            cpu: 2000m
+            memory: 4Gi
+            
+      initContainers:
+      # Download OpenTelemetry Java Agent
+      - name: download-otel-agent
+        image: curlimages/curl:latest
+        command:
+        - sh
+        - -c
+        - |
+          curl -L -o /opt/opentelemetry/opentelemetry-javaagent.jar \
+            https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar
+        volumeMounts:
+        - name: opentelemetry-agent
+          mountPath: /opt/opentelemetry
+          
+      volumes:
+      - name: otel-config
+        configMap:
+          name: jenkins-otel-config
+      - name: opentelemetry-agent
+        emptyDir: {}
+        
+  volumeClaimTemplates:
+  - metadata:
+      name: jenkins-home
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 20Gi

@@ -1,0 +1,38 @@
+# Simplified Tempo Configuration for testing
+# ==========================================
+
+# Basic Tempo configuration without complex storage setup
+tempo:
+  # Use simple local storage for testing
+  storage:
+    trace:
+      backend: local
+      local:
+        path: /var/tempo/traces
+
+# Basic resource configuration
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 1Gi
+
+# Simple service configuration
+service:
+  type: ClusterIP
+  port: 3200
+
+# Basic persistence
+persistence:
+  enabled: true
+  size: 5Gi
+
+# Enable service monitor
+serviceMonitor:
+  enabled: true
+
+# Node selector to avoid spot nodes
+nodeSelector:
+  kubernetes.azure.com/scalesetpriority: Regular

@@ -1,0 +1,353 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Jenkins Master-Pod Distributed Tracing",
+    "tags": ["jenkins", "tracing", "spot-workers", "tempo"],
+    "style": "dark",
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Jenkins Master-Pod Trace Timeline",
+        "type": "traces",
+        "targets": [
+          {
+            "datasource": {
+              "type": "tempo",
+              "uid": "tempo-uid"
+            },
+            "query": "{ service.name=\"jenkins-master\" }",
+            "queryType": "nativeSearch",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 12,
+          "w": 24,
+          "x": 0,
+          "y": 0
+        },
+        "options": {
+          "showTraceId": true,
+          "showSpanLabels": true
+        }
+      },
+      {
+        "id": 2,
+        "title": "Jenkins Job Execution Traces",
+        "type": "traces",
+        "targets": [
+          {
+            "datasource": {
+              "type": "tempo",
+              "uid": "tempo-uid"
+            },
+            "query": "{ span.jenkins.job.name!=\"\" }",
+            "queryType": "nativeSearch",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 12
+        }
+      },
+      {
+        "id": 3,
+        "title": "Pod Communication Traces",
+        "type": "traces",
+        "targets": [
+          {
+            "datasource": {
+              "type": "tempo",
+              "uid": "tempo-uid"
+            },
+            "query": "{ k8s.pod.name!=\"\" && service.name=\"jenkins-agent\" }",
+            "queryType": "nativeSearch",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 12
+        }
+      },
+      {
+        "id": 4,
+        "title": "Error Traces by Service",
+        "type": "stat",
+        "targets": [
+          {
+            "datasource": {
+              "type": "tempo",
+              "uid": "tempo-uid"
+            },
+            "query": "{ status=error }",
+            "queryType": "metrics",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 0,
+          "y": 20
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 1
+                },
+                {
+                  "color": "red",
+                  "value": 5
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Trace Duration Distribution",
+        "type": "histogram",
+        "targets": [
+          {
+            "datasource": {
+              "type": "tempo",
+              "uid": "tempo-uid"
+            },
+            "query": "{ service.name=\"jenkins-master\" }",
+            "queryType": "metrics",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 6,
+          "y": 20
+        }
+      },
+      {
+        "id": 6,
+        "title": "Service Dependencies (Node Graph)",
+        "type": "nodeGraph",
+        "targets": [
+          {
+            "datasource": {
+              "type": "tempo",
+              "uid": "tempo-uid"
+            },
+            "query": "{ service.name=\"jenkins-master\" || service.name=\"jenkins-agent\" }",
+            "queryType": "nativeSearch",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 20
+        }
+      },
+      {
+        "id": 7,
+        "title": "Jenkins Master Logs (Correlated with Traces)",
+        "type": "logs",
+        "targets": [
+          {
+            "datasource": {
+              "type": "loki",
+              "uid": "loki-uid"
+            },
+            "expr": "{namespace=\"jenkins-master\", container=\"jenkins\"} | json | line_format \"{{.timestamp}} [{{.level}}] {{.message}}\"",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 28
+        },
+        "options": {
+          "showLabels": true,
+          "showTime": true,
+          "sortOrder": "Descending",
+          "wrapLogMessage": false,
+          "enableLogDetails": true,
+          "dedupStrategy": "none"
+        }
+      },
+      {
+        "id": 8,
+        "title": "Spot Worker Pod Logs (Trace Correlated)",
+        "type": "logs",
+        "targets": [
+          {
+            "datasource": {
+              "type": "loki",
+              "uid": "loki-uid"
+            },
+            "expr": "{namespace=\"jenkins-workers\", kubernetes_node_name=~\".*spot.*\"} | json | line_format \"{{.timestamp}} [{{.level}}] {{.message}}\"",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 28
+        },
+        "options": {
+          "showLabels": true,
+          "showTime": true,
+          "sortOrder": "Descending",
+          "wrapLogMessage": false,
+          "enableLogDetails": true,
+          "dedupStrategy": "none"
+        }
+      },
+      {
+        "id": 9,
+        "title": "Jenkins Job Failure Analysis",
+        "type": "table",
+        "targets": [
+          {
+            "datasource": {
+              "type": "tempo",
+              "uid": "tempo-uid"
+            },
+            "query": "{ status=error && span.jenkins.job.name!=\"\" }",
+            "queryType": "nativeSearch",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 6,
+          "w": 24,
+          "x": 0,
+          "y": 36
+        },
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {
+                "traceID": "Trace ID",
+                "span.jenkins.job.name": "Job Name",
+                "span.jenkins.job.result": "Result",
+                "span.jenkins.node.name": "Node",
+                "duration": "Duration",
+                "startTime": "Start Time"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "annotations": {
+      "list": [
+        {
+          "builtIn": 1,
+          "datasource": {
+            "type": "grafana",
+            "uid": "-- Grafana --"
+          },
+          "enable": true,
+          "hide": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "name": "Annotations & Alerts",
+          "type": "dashboard"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki-uid"
+          },
+          "enable": true,
+          "expr": "{namespace=\"jenkins-master\"} |= \"ERROR\" | json",
+          "iconColor": "red",
+          "name": "Jenkins Errors",
+          "titleFormat": "Jenkins Error: {{.message}}",
+          "textFormat": "{{.level}}: {{.message}}"
+        }
+      ]
+    },
+    "templating": {
+      "list": [
+        {
+          "current": {
+            "selected": false,
+            "text": "All",
+            "value": "$__all"
+          },
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo-uid"
+          },
+          "definition": "label_values(service_name)",
+          "hide": 0,
+          "includeAll": true,
+          "multi": true,
+          "name": "service",
+          "options": [],
+          "query": "label_values(service_name)",
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 0,
+          "type": "query"
+        },
+        {
+          "current": {
+            "selected": false,
+            "text": "All",
+            "value": "$__all"
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-uid"
+          },
+          "definition": "label_values(kube_pod_info{namespace=\"jenkins-workers\"}, pod)",
+          "hide": 0,
+          "includeAll": true,
+          "multi": true,
+          "name": "pod",
+          "options": [],
+          "query": {
+            "query": "label_values(kube_pod_info{namespace=\"jenkins-workers\"}, pod)",
+            "refId": "StandardVariableQuery"
+          },
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 0,
+          "type": "query"
+        }
+      ]
+    }
+  }
+}

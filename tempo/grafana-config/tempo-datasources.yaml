@@ -1,0 +1,160 @@
+# Grafana Datasource Configuration for Tempo Integration
+# =====================================================
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-tempo-datasource
+  namespace: observability-stack
+  labels:
+    grafana_datasource: "1"
+data:
+  tempo-datasource.yaml: |
+    apiVersion: 1
+    
+    datasources:
+      # Tempo datasource for distributed tracing
+      - name: Tempo
+        type: tempo
+        access: proxy
+        url: http://tempo:3200
+        uid: tempo-uid
+        basicAuth: false
+        isDefault: false
+        editable: true
+        jsonData:
+          # Configure trace to logs correlation
+          tracesToLogsV2:
+            datasourceUid: 'loki-uid'
+            spanStartTimeShift: '-1h'
+            spanEndTimeShift: '1h'
+            tags: ['job', 'instance', 'pod', 'namespace']
+            filterByTraceID: false
+            filterBySpanID: false
+            customQuery: true
+            query: |
+              {namespace="${__span.tags.namespace}", pod="${__span.tags.pod}"} 
+              | json 
+              | line_format "{{.timestamp}} [{{.level}}] {{.message}}"
+          
+          # Configure trace to metrics correlation  
+          tracesToMetrics:
+            datasourceUid: 'prometheus-uid'
+            spanStartTimeShift: '-1h'
+            spanEndTimeShift: '1h'
+            tags: [
+              { key: 'service.name', value: 'service' },
+              { key: 'job', value: 'job' }
+            ]
+            queries:
+              - name: 'Request Rate'
+                query: 'rate(traces_total{$$__tags}[5m])'
+              - name: 'Error Rate'
+                query: 'rate(traces_total{$$__tags,status="error"}[5m])'
+              - name: 'Duration'
+                query: 'histogram_quantile(0.95, rate(duration_bucket{$$__tags}[5m]))'
+          
+          # Node graph configuration for service dependencies
+          nodeGraph:
+            enabled: true
+          
+          # Service map configuration
+          serviceMap:
+            datasourceUid: 'prometheus-uid'
+          
+          # Lokitoken for authentication (if needed)
+          # httpHeaderName1: 'Authorization'
+          
+          # Search configuration
+          search:
+            hide: false
+          
+          # Streaming configuration
+          streaming:
+            enabled: false
+        
+        # Additional configuration for Jenkins-specific tracing
+        secureJsonData: {}
+
+---
+# Updated Loki datasource with tracing correlation
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-loki-datasource-updated
+  namespace: observability-stack
+  labels:
+    grafana_datasource: "1"
+data:
+  loki-datasource.yaml: |
+    apiVersion: 1
+    
+    datasources:
+      - name: Loki
+        type: loki
+        access: proxy
+        url: http://loki:3100
+        uid: loki-uid
+        basicAuth: false
+        isDefault: false
+        editable: true
+        jsonData:
+          # Configure logs to trace correlation
+          derivedFields:
+            - name: "TraceID"
+              label: "traceID"
+              url: "$$${__value.raw}"
+              datasourceUid: "tempo-uid"
+              matcherRegex: "traceID=([a-f0-9]+)"
+              matcherType: "regex"
+            
+            - name: "Jenkins Job Trace"
+              label: "jenkins_job_id"
+              url: "$$${__value.raw}"
+              datasourceUid: "tempo-uid" 
+              matcherRegex: "job_id=([a-zA-Z0-9-]+)"
+              matcherType: "regex"
+              
+            - name: "Pod Trace"
+              label: "pod_name"
+              url: "$$${__value.raw}"
+              datasourceUid: "tempo-uid"
+              matcherRegex: "pod=([a-zA-Z0-9-]+)"
+              matcherType: "regex"
+
+---
+# Updated Prometheus datasource with tracing correlation  
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-prometheus-datasource-updated
+  namespace: observability-stack
+  labels:
+    grafana_datasource: "1"
+data:
+  prometheus-datasource.yaml: |
+    apiVersion: 1
+    
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus-stack-prometheus:9090
+        uid: prometheus-uid
+        basicAuth: false
+        isDefault: true
+        editable: true
+        jsonData:
+          # Configure metrics to trace correlation
+          exemplars:
+            - name: "Trace"
+              label: "traceID"
+              url: "$$${__value.raw}"
+              datasourceUid: "tempo-uid"
+              
+          # Prometheus query timeout
+          timeInterval: "30s"
+          queryTimeout: "60s"
+          
+          # Custom headers for authentication
+          httpMethod: GET
