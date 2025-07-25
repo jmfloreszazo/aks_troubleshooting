@@ -40,10 +40,10 @@ controller:
   
   # Configuración del admin
   admin:
-    username: "admin"
-    password: "admin123"
-  
-  # Plugins esenciales incluye Kubernetes para workers spot
+    username: admin
+    password: admin
+
+    # Plugins esenciales incluye Kubernetes para workers spot
   installPlugins:
     - kubernetes
     - workflow-aggregator
@@ -52,6 +52,7 @@ controller:
     - build-timeout
     - credentials-binding
     - timestamper
+    - role-strategy:3.2.0
 
   # Configuración de servicio
   serviceType: LoadBalancer

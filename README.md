@@ -26,11 +26,13 @@ aks_troubleshooting_v2/
 ├── 05_install_observability.sh        # Observability stack (Logs)
 ├── 06_verify_spot_monitoring.sh       # Monitoring verification
 ├── 07_install_prometheus_monitoring.sh # Prometheus stack (Metrics)
+├── 08_configure_unified_grafana.sh     # Unified Grafana dashboards
 ├── common.sh                          # Common functions
 ├── .env.production                    # Environment variables
 ├── grafana/                           # Grafana dashboard scripts
-│   ├── spot_dashboard.sh              # Spot monitoring dashboard
-│   └── create_kubernetes_cluster_dashboard.sh # K8s cluster dashboard
+│   ├── create_jenkins_alerts.sh       # Jenkins alerting rules
+│   ├── create_working_dashboard.sh     # Working dashboard
+│   └── queries/                       # Pre-defined Loki queries
 ├── QUERIES.md                         # Complete Loki queries documentation
 ├── helm/                              # Helm configurations
 │   ├── jenkins_helm_values.yaml       # Jenkins Master
@@ -38,10 +40,15 @@ aks_troubleshooting_v2/
 │   ├── fluent_bit_helm_values.yaml    # Fluent Bit (collection)
 │   ├── grafana_helm_values.yaml       # Grafana (visualization)
 │   └── prometheus_helm_values.yaml    # Prometheus stack (metrics)
-└── jenkins_scripts/                   # Groovy scripts
-    ├── jenkins_spot_cloud.groovy      # Cloud configuration
-    ├── demo_spot_complete_pipeline.groovy      # Demo pipeline
-    └── monitor_spot_workers_pipeline.groovy    # Monitoring pipeline
+├── jenkins_scripts/                   # Groovy scripts
+│   ├── jenkins_spot_cloud.groovy      # Cloud configuration
+│   ├── demo_spot_complete_pipeline.groovy      # Demo pipeline
+│   └── monitor_spot_workers_pipeline.groovy    # Monitoring pipeline
+├── testing-errors/                    # Error testing environment
+│   ├── create_error_testing_environment.sh    # Creates error node pool + apps
+│   └── jenkins_pipeline_clean.groovy          # Error simulation pipeline
+└── testing-inodes/                    # Inode diagnostics
+    └── diagnose_node_inodes.sh         # Detailed inode analysis script
 ```
 
 ## Sequential Execution
@@ -79,7 +86,7 @@ aks_troubleshooting_v2/
 ### 7. Grafana dashboards
 
 ```bash
-./grafana/spot_dashboard.sh
+./grafana/create_working_dashboard.sh
 ```
 
 ### 8. Loki Queries Documentation
@@ -174,13 +181,13 @@ The system includes:
 ## Service Access URLs
 
 ### Jenkins Infrastructure
-- **Jenkins Master**: http://9.163.63.16:8080
+- **Jenkins Master**: Available via LoadBalancer service
   - Username: `admin`
   - Password: `admin123`
   - **Features**: Spot workers configuration, pipeline automation
 
 ### Unified Observability (Single Grafana Instance)
-- **Grafana Dashboard**: http://4.175.33.237
+- **Grafana Dashboard**: Available via LoadBalancer service
   - Username: `admin`
   - Password: `admin123`
   - **Features**: 
@@ -218,46 +225,46 @@ The system includes:
 ```mermaid
 graph TB
     %% External Users
-    DevOps[👨‍💻 DevOps Engineer] --> |Build Jobs| JenkinsLB
-    Admin[👨‍💻 System Admin] --> |Monitoring| GrafanaLB
+    DevOps[DevOps Engineer] --> |Build Jobs| JenkinsLB
+    Admin[System Admin] --> |Monitoring| GrafanaLB
     
     %% Load Balancers
-    JenkinsLB[🌐 Jenkins LoadBalancer<br/>9.163.63.16:8080] --> JenkinsMaster
-    GrafanaLB[🌐 Grafana LoadBalancer<br/>4.175.33.237] --> GrafanaUI
+    JenkinsLB[Jenkins LoadBalancer<br/>External Access] --> JenkinsMaster
+    GrafanaLB[Grafana LoadBalancer<br/>External Access] --> GrafanaUI
     
     %% AKS Cluster Container
-    subgraph AKS["🚀 AKS Cluster - Multi-Node Pool Architecture"]
+    subgraph AKS["AKS Cluster - Multi-Node Pool Architecture"]
         
         %% System Node Pool
-        subgraph SystemPool["🔧 aks-system (System Pool)<br/>Standard_D2s_v3"]
-            K8sAPI[⚙️ Kubernetes API Server]
-            CoreDNS[🌐 CoreDNS]
-            KubeProxy[🔀 kube-proxy]
-            ETCD[💾 etcd]
+        subgraph SystemPool["aks-system (System Pool)<br/>Standard_D2s_v3"]
+            K8sAPI[Kubernetes API Server]
+            CoreDNS[CoreDNS]
+            KubeProxy[kube-proxy]
+            ETCD[etcd]
         end
         
         %% Regular Node Pool  
-        subgraph RegularPool["💪 aks-regular (Regular Pool)<br/>Standard_D4s_v3"]
-            JenkinsMaster[🏗️ Jenkins Master<br/>Stable & Persistent]
-            LokiSvc[📝 Loki Server<br/>Log Storage]
-            FluentBitReg[📤 Fluent Bit<br/>Log Collection]
+        subgraph RegularPool["aks-regular (Regular Pool)<br/>Standard_D4s_v3"]
+            JenkinsMaster[Jenkins Master<br/>Stable & Persistent]
+            LokiSvc[Loki Server<br/>Log Storage]
+            FluentBitReg[Fluent Bit<br/>Log Collection]
         end
         
         %% Spot Node Pool
-        subgraph SpotPool["💰 aks-spot (Spot Pool)<br/>Standard_D4s_v3 - 60-90% Cost Savings"]
-            JenkinsAgent1[🤖 Jenkins Agent Pod 1<br/>Dynamic Scaling]
-            JenkinsAgent2[🤖 Jenkins Agent Pod 2<br/>Dynamic Scaling]
-            JenkinsAgentN[🤖 Jenkins Agent Pod N<br/>Auto-provisioned]
-            FluentBitSpot[📤 Fluent Bit<br/>Tolerations for Spot]
-            NodeExporterSpot[📊 Node Exporter<br/>Spot Metrics]
+        subgraph SpotPool["aks-spot (Spot Pool)<br/>Standard_D4s_v3 - 60-90% Cost Savings"]
+            JenkinsAgent1[Jenkins Agent Pod 1<br/>Dynamic Scaling]
+            JenkinsAgent2[Jenkins Agent Pod 2<br/>Dynamic Scaling]
+            JenkinsAgentN[Jenkins Agent Pod N<br/>Auto-provisioned]
+            FluentBitSpot[Fluent Bit<br/>Tolerations for Spot]
+            NodeExporterSpot[Node Exporter<br/>Spot Metrics]
         end
         
         %% Monitoring Node Pool
-        subgraph MonitorPool["📊 aks-monitoring (Monitoring Pool)<br/>Standard_D4s_v3"]
-            GrafanaUI[📈 Grafana UI<br/>Unified Dashboard]
-            PromSvc[📊 Prometheus Server<br/>Metrics Storage]
-            AlertManager[🚨 AlertManager<br/>Notifications]
-            NodeExporter[📊 Node Exporter<br/>System Metrics]
+        subgraph MonitorPool["aks-monitoring (Monitoring Pool)<br/>Standard_D4s_v3"]
+            GrafanaUI[Grafana UI<br/>Unified Dashboard]
+            PromSvc[Prometheus Server<br/>Metrics Storage]
+            AlertManager[AlertManager<br/>Notifications]
+            NodeExporter[Node Exporter<br/>System Metrics]
         end
     end
     
@@ -290,7 +297,7 @@ graph TB
     JenkinsAgentN --> |Build Results| JenkinsMaster
     
     %% Spot Instance Management
-    Azure[☁️ Azure Spot Service] --> |Interrupt/Evict| SpotPool
+    Azure[Azure Spot Service] --> |Interrupt/Evict| SpotPool
     SpotPool --> |Scale Events| AlertManager
     
     %% Styling
@@ -361,7 +368,7 @@ kubectl get pods -A | grep -E "(jenkins|grafana|prometheus|loki)"  # Check servi
 kubectl get services -A | grep LoadBalancer  # Check external access
 
 # Access monitoring
-curl -s http://4.175.33.237/api/health     # Unified Grafana health
+curl -s http://LoadBalancer-IP/api/health     # Unified Grafana health
 ```
 
 ---
@@ -415,6 +422,434 @@ Your AKS cluster now has:
 - **Jenkins Health**: Master and worker health monitoring
 
 ## Integration Benefits
+
+---
+
+## Error Testing Environment
+
+### Overview
+
+The error testing environment is designed to simulate various types of failures and stress conditions in a controlled AKS environment. This allows testing of monitoring systems, alerting mechanisms, and troubleshooting procedures.
+
+### Architecture Flow
+
+```mermaid
+graph TB
+    %% User Actions
+    DevOps[DevOps Engineer] --> |Deploy Error Tests| ErrorScript
+    Admin[Admin] --> |Monitor Alerts| GrafanaAlerts
+    
+    %% Error Testing Components
+    subgraph ErrorTesting["Error Testing Environment"]
+        ErrorScript[create_error_testing_environment.sh]
+        ErrorPipeline[jenkins_pipeline_clean.groovy]
+        
+        ErrorScript --> |Creates| ErrorNodes[Error Node Pool]
+        ErrorScript --> |Deploys| ErrorApps[Error Applications]
+        ErrorPipeline --> |Simulates| ErrorTypes[Error Types]
+    end
+    
+    %% Error Node Pool
+    subgraph ErrorNodes["Error Node Pool (aks-errors)"]
+        ErrorNode1[Node with Taints<br/>purpose=errors:NoSchedule]
+        Tolerations[Tolerations Required<br/>for Scheduling]
+    end
+    
+    %% Error Applications
+    subgraph ErrorApps["Error Applications"]
+        InodeApp[Inode Consumer<br/>Creates thousands of files]
+        MemoryApp[Memory Stress<br/>High memory usage]
+        CPUApp[CPU Intensive<br/>High CPU load]
+        CrashApp[Crash Generator<br/>Random failures]
+        LogApp[Log Generator<br/>Error log patterns]
+    end
+    
+    %% Error Types from Pipeline
+    subgraph ErrorTypes["Jenkins Pipeline Error Types"]
+        MemoryError[Memory Stress Testing<br/>0% failure rate*]
+        FilesystemError[FileSystem Stress Testing<br/>0% failure rate*]
+        NetworkError[Network Error Simulation<br/>0% failure rate*]
+        CrashError[Crash Simulation<br/>0% failure rate*]
+        HealthCheck[System Health Check<br/>Always runs]
+    end
+    
+    %% Monitoring Integration
+    subgraph Monitoring["Monitoring Integration"]
+        GrafanaAlerts[Grafana Dashboards<br/>Real-time monitoring]
+        LokiLogs[Loki Log Storage<br/>Error log patterns]
+        PrometheusMetrics[Prometheus Metrics<br/>Resource usage]
+        Alerts[AlertManager<br/>Failure notifications]
+    end
+    
+    %% Connections
+    ErrorApps --> |Generate| LokiLogs
+    ErrorApps --> |Metrics| PrometheusMetrics
+    ErrorPipeline --> |Logs| LokiLogs
+    LokiLogs --> GrafanaAlerts
+    PrometheusMetrics --> GrafanaAlerts
+    GrafanaAlerts --> Alerts
+    
+    %% Styling
+    classDef errorNode fill:#ff6b6b,stroke:#d63031,stroke-width:2px,color:#fff
+    classDef monitorNode fill:#74b9ff,stroke:#0984e3,stroke-width:2px,color:#fff
+    classDef appNode fill:#fd79a8,stroke:#e84393,stroke-width:2px,color:#fff
+    
+    class ErrorNode1,ErrorScript errorNode
+    class GrafanaAlerts,LokiLogs,PrometheusMetrics monitorNode
+    class InodeApp,MemoryApp,CPUApp,CrashApp,LogApp appNode
+```
+
+*Note: Failure rates set to 0% for predictable testing. Can be adjusted by modifying RANDOM threshold values.*
+
+### Testing Components
+
+#### 1. Error Node Pool Creation (`testing-errors/create_error_testing_environment.sh`)
+
+**Purpose**: Creates a dedicated node pool for error testing applications
+
+**What it does**:
+- Creates `aks-errors` node pool with taints (`purpose=errors:NoSchedule`)
+- Deploys namespace `testing-errors`
+- Installs 5 different error-generating applications
+- Configures proper tolerations for error testing workloads
+
+**Key Features**:
+```bash
+# Node Pool Configuration
+- Node VM Size: Standard_DS2_v2
+- Auto-scaling: 1-2 nodes
+- Taints: purpose=errors:NoSchedule
+- Labels: purpose=errors, type=testing
+- Zones: 1, 2, 3 (high availability)
+```
+
+**Deployed Applications**:
+1. **Inode Consumer**: Creates thousands of small files
+2. **Memory Stress**: High memory consumption patterns
+3. **CPU Intensive**: Sustained CPU load
+4. **Crash Generator**: Random application failures
+5. **Log Generator**: Produces error log patterns
+
+**Usage**:
+```bash
+cd testing-errors/
+./create_error_testing_environment.sh
+```
+
+#### 2. Jenkins Error Testing Pipeline (`testing-errors/jenkins_pipeline_clean.groovy`)
+
+**Purpose**: Comprehensive Jenkins pipeline for simulating different types of system failures
+
+**Pipeline Parameters**:
+- **ERROR_TYPE**: 
+  - `ALL` - Runs all error types sequentially
+  - `MEMORY` - Memory stress testing only
+  - `FILESYSTEM` - FileSystem stress testing only
+  - `NETWORK` - Network error simulation only
+  - `CRASH` - Crash simulation only
+
+- **FORCE_FAILURE**: 
+  - `false` (default) - Random failures based on probability
+  - `true` - Guaranteed pipeline failure
+
+- **DURATION_SECONDS**: 
+  - `30` (default) - Duration/intensity of each test
+  - Higher values = more intensive testing
+
+**Pipeline Stages**:
+
+1. **Initialization**
+   - System information gathering
+   - Environment validation
+   - Resource baseline measurement
+
+2. **Memory Stress Testing**
+   - Creates large files (size = DURATION_SECONDS MB)
+   - Parallel processing simulation
+   - Memory cleanup verification
+   - **Current failure rate: 0%** (RANDOM < 0)
+
+3. **FileSystem Stress Testing**
+   - Creates 1000 small files
+   - Intensive I/O operations
+   - Large file creation (3x 10MB files)
+   - Directory operations testing
+   - **Current failure rate: 0%** (RANDOM < 0)
+
+4. **Network Error Simulation**
+   - DNS resolution testing
+   - Connection timeout simulation
+   - Latency measurement
+   - Service connectivity testing
+   - **Current failure rate: 0%** (RANDOM < 0)
+
+5. **Crash Simulation**
+   - Segmentation fault simulation
+   - Out of memory simulation
+   - Assertion failure simulation
+   - Fatal timeout simulation
+   - **Current failure rate: 0%** (RANDOM < 0)
+
+6. **System Health Check**
+   - Resource utilization summary
+   - Performance metrics collection
+   - Error summary reporting
+
+**Pipeline Configuration**:
+```groovy
+# Kubernetes Agent Configuration
+- Runs on: purpose=errors nodes
+- Tolerations: purpose=errors:NoSchedule
+- Resources: 100Mi-500Mi memory, 100m-500m CPU
+- Timeout: 15 minutes with 2 retries
+```
+
+**How to Use**:
+1. Access Jenkins: Available via LoadBalancer service
+2. Create new Pipeline Job: "error-testing-pipeline"
+3. Copy content from `jenkins_pipeline_clean.groovy`
+4. Configure parameters:
+   ```
+   ERROR_TYPE: ALL (for comprehensive testing)
+   FORCE_FAILURE: false (for random behavior)
+   DURATION_SECONDS: 30 (moderate intensity)
+   ```
+5. Run "Build with Parameters"
+
+**Customizing Failure Rates**:
+To adjust failure probabilities, modify these values in the pipeline:
+```bash
+# Current settings (0% failure)
+if [ $((RANDOM % 100)) -lt 0 ]; then  # 0% chance
+
+# For 30% failure rate
+if [ $((RANDOM % 100)) -lt 30 ]; then  # 30% chance
+
+# For 50% failure rate  
+if [ $((RANDOM % 100)) -lt 50 ]; then  # 50% chance
+```
+
+---
+
+## Inode Diagnostics
+
+### Overview
+
+The inode diagnostics tool provides deep analysis of inode usage across AKS nodes, essential for troubleshooting "no space left on device" errors that occur due to inode exhaustion.
+
+### Inode Analysis Flow
+
+```mermaid
+graph TB
+    %% User Input
+    Admin[System Administrator] --> |Runs Diagnostic| InodeScript
+    
+    %% Main Script
+    InodeScript[diagnose_node_inodes.sh]
+    
+    %% Script Actions
+    InodeScript --> CreatePods[Create Debug Pods]
+    CreatePods --> |Per Node| DebugPods
+    
+    %% Debug Pods per Node
+    subgraph DebugPods["Debug Pods (Per Node)"]
+        DebugSystem[Debug Pod - aks-system]
+        DebugRegular[Debug Pod - aks-regular] 
+        DebugSpot[Debug Pod - aks-spot]
+        DebugErrors[Debug Pod - aks-errors]
+        DebugMonitoring[Debug Pod - aks-monitoring]
+    end
+    
+    %% Analysis Categories
+    subgraph Analysis["Comprehensive Analysis"]
+        BasicInfo[Basic Inode Information<br/>- Total inodes per filesystem<br/>- Used inodes count<br/>- Available inodes<br/>- Usage percentage]
+        
+        DetailedBreakdown[Detailed Directory Breakdown<br/>- Top inode consumers<br/>- Directory-by-directory analysis<br/>- Container overlay usage<br/>- System directory analysis]
+        
+        K8sSpecific[Kubernetes-Specific Analysis<br/>- /var/lib/kubelet analysis<br/>- Container runtime usage<br/>- Pod-specific directories<br/>- Log file accumulation]
+        
+        Recommendations[Recommendations<br/>- Cleanup suggestions<br/>- Optimization strategies<br/>- Monitoring setup<br/>- Prevention measures]
+    end
+    
+    %% Output Generation
+    subgraph Output["Generated Reports"]
+        ConsoleOutput[Console Output<br/>Real-time analysis]
+        NodeReports[Per-Node Reports<br/>Detailed breakdown]
+        Summary[Cluster Summary<br/>Overall health status]
+    end
+    
+    %% Connections
+    DebugPods --> BasicInfo
+    DebugPods --> DetailedBreakdown
+    DebugPods --> K8sSpecific
+    DebugPods --> Recommendations
+    
+    BasicInfo --> ConsoleOutput
+    DetailedBreakdown --> NodeReports
+    K8sSpecific --> NodeReports
+    Recommendations --> Summary
+    
+    %% Pod Cleanup
+    InodeScript --> CleanupPods[Cleanup Debug Pods]
+    
+    %% Styling
+    classDef scriptNode fill:#74b9ff,stroke:#0984e3,stroke-width:2px,color:#fff
+    classDef debugNode fill:#fd79a8,stroke:#e84393,stroke-width:2px,color:#fff
+    classDef analysisNode fill:#55a3ff,stroke:#2d3436,stroke-width:2px,color:#fff
+    classDef outputNode fill:#00b894,stroke:#00a085,stroke-width:2px,color:#fff
+    
+    class InodeScript scriptNode
+    class DebugSystem,DebugRegular,DebugSpot,DebugErrors,DebugMonitoring debugNode
+    class BasicInfo,DetailedBreakdown,K8sSpecific,Recommendations analysisNode
+    class ConsoleOutput,NodeReports,Summary outputNode
+```
+
+### Diagnostic Tool (`testing-inodes/diagnose_node_inodes.sh`)
+
+**Purpose**: Comprehensive inode usage analysis across all AKS nodes
+
+**What it analyzes**:
+
+1. **Basic Inode Information**:
+   - Total inodes per filesystem
+   - Used and available inodes
+   - Usage percentage and warnings
+
+2. **Detailed Directory Breakdown**:
+   - Top inode-consuming directories
+   - Recursive directory analysis
+   - File count per directory level
+
+3. **Kubernetes-Specific Analysis**:
+   - `/var/lib/kubelet` usage patterns
+   - Container overlay directories
+   - Pod-specific storage consumption
+   - Log file accumulation
+
+4. **Critical System Directories**:
+   - `/tmp` usage analysis
+   - `/var/log` log file consumption
+   - System cache directories
+   - Container image storage
+
+**Key Features**:
+- **Privileged Access**: Uses privileged pods for direct node filesystem access
+- **Multi-Node Analysis**: Analyzes all nodes in the cluster simultaneously
+- **Automated Cleanup**: Removes debug pods after analysis
+- **Detailed Reporting**: Provides actionable recommendations
+
+**Usage**:
+```bash
+cd testing-inodes/
+./diagnose_node_inodes.sh
+```
+
+**Sample Output Analysis**:
+```bash
+# Basic Inode Information
+Filesystem: /dev/sda1
+Total Inodes: 6,553,600
+Used Inodes: 2,847,392 (43%)
+Available: 3,706,208
+
+# Top Inode Consumers
+/var/lib/kubelet/pods: 1,245,678 files
+/var/lib/docker/overlay2: 892,341 files  
+/tmp: 234,567 files
+/var/log: 156,789 files
+
+# Kubernetes-Specific Analysis
+Container Overlay Usage: 45% of total inodes
+Active Pod Directories: 127 pods
+Log File Count: 45,678 files
+```
+
+**When to Use**:
+- "No space left on device" errors despite available disk space
+- Pod scheduling failures due to storage issues
+- Performance degradation related to filesystem operations
+- Routine cluster health monitoring
+- Before and after deploying inode-intensive applications
+
+---
+
+## Comprehensive Testing Workflow
+
+### End-to-End Testing Sequence
+
+1. **Environment Setup**:
+   ```bash
+   # Deploy error testing environment
+   cd testing-errors/
+   ./create_error_testing_environment.sh
+   
+   # Verify error applications are running
+   kubectl get pods -n testing-errors
+   ```
+
+2. **Baseline Measurement**:
+   ```bash
+   # Analyze inode usage before testing
+   cd testing-inodes/
+   ./diagnose_node_inodes.sh
+   ```
+
+3. **Execute Error Testing**:
+   ```bash
+   # Run Jenkins error simulation pipeline
+   # Access: Available via LoadBalancer service
+   # Job: error-testing-pipeline
+   # Parameters: ERROR_TYPE=ALL, DURATION_SECONDS=60
+   ```
+
+4. **Monitor Real-time**:
+   ```bash
+   # Monitor via Grafana dashboards
+   # Access: Available via LoadBalancer service
+   # View: Error Testing Dashboard
+   ```
+
+5. **Post-Test Analysis**:
+   ```bash
+   # Re-run inode analysis
+   cd testing-inodes/
+   ./diagnose_node_inodes.sh
+   
+   # Compare before/after results
+   ```
+
+### Integration with Monitoring
+
+**Grafana Integration**:
+- Error testing metrics appear in unified dashboards
+- Real-time resource consumption monitoring
+- Alert triggers during intensive testing
+
+**Loki Log Integration**:
+- All error pipeline logs stored in Loki
+- Error patterns easily searchable
+- Historical failure analysis available
+
+**Prometheus Metrics Integration**:
+- Resource usage metrics during testing
+- Node-level performance impact analysis
+- Correlation between errors and resource consumption
+
+---
+
+## **Success Summary**
+
+Your AKS cluster now has:
+- Complete Jenkins automation with spot workers
+- Unified observability system (single Grafana for logs + metrics)
+- **Comprehensive error testing environment with controlled failure simulation**
+- **Advanced inode diagnostics for troubleshooting storage issues**
+- Cost-optimized infrastructure with 5 specialized node pools (including errors)
+- Custom dashboards for AKS analysis including error testing monitoring
+- 36+ pre-configured monitoring queries
+- **Professional-grade testing tools for monitoring system validation**
+
+**Ready for production workloads with comprehensive monitoring, cost optimization, and robust testing capabilities.**
 
 Combining Loki (logs) with Prometheus (metrics) provides:
 - **Complete Observability**: Logs + Metrics in unified dashboards
