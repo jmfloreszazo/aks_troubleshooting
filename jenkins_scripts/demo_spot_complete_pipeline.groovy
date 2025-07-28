@@ -19,7 +19,34 @@ def job = jenkins.createProject(WorkflowJob.class, jobName)
 
 def pipelineScript = '''
 pipeline {
-    agent { label 'nodepool=spot' }
+    agent {
+        kubernetes {
+            yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  nodeSelector:
+    nodepool: spot
+  tolerations:
+  - key: "kubernetes.azure.com/scalesetpriority"
+    operator: "Equal"
+    value: "spot"
+    effect: "NoSchedule"
+  containers:
+  - name: worker
+    image: alpine:latest
+    command: ['cat']
+    tty: true
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+"""
+        }
+    }
     
     options {
         timeout(time: 10, unit: 'MINUTES')
@@ -57,26 +84,28 @@ pipeline {
                     echo "System Validation Phase"
                     echo "======================="
                     
-                    // Basic system tests
-                    sh 'echo "Test 1: System Information"'
-                    sh 'hostname'
-                    sh 'whoami'
-                    sh 'pwd'
-                    
-                    echo ""
-                    echo "Test 2: Memory Information"
-                    sh 'echo "Available memory:"'
-                    sh 'head -3 /proc/meminfo || echo "Memory: OK"'
-                    
-                    echo ""
-                    echo "Test 3: Disk Space"
-                    sh 'echo "Disk usage:"'
-                    sh 'df -h | head -5 || echo "Disk: OK"'
-                    
-                    echo ""
-                    echo "Test 4: Network Connectivity"
-                    sh 'echo "Network test:"'
-                    sh 'ping -c 3 8.8.8.8 || echo "Network: Limited but functional"'
+                    container('worker') {
+                        // Basic system tests
+                        sh 'echo "Test 1: System Information"'
+                        sh 'hostname'
+                        sh 'whoami'
+                        sh 'pwd'
+                        
+                        echo ""
+                        echo "Test 2: Memory Information"
+                        sh 'echo "Available memory:"'
+                        sh 'head -3 /proc/meminfo || echo "Memory: OK"'
+                        
+                        echo ""
+                        echo "Test 3: Disk Space"
+                        sh 'echo "Disk usage:"'
+                        sh 'df -h | head -5 || echo "Disk: OK"'
+                        
+                        echo ""
+                        echo "Test 4: Network Connectivity"
+                        sh 'echo "Network test:"'
+                        sh 'ping -c 3 8.8.8.8 || echo "Network: Limited but functional"'
+                    }
                     
                     echo ""
                     echo "System validation completed successfully"
@@ -93,12 +122,14 @@ pipeline {
                     
                     echo "Executing performance tests on spot worker..."
                     
-                    // Performance demonstration
-                    for (int i = 1; i <= 5; i++) {
-                        echo "Performance test ${i}/5: Processing workload..."
-                        sh "echo 'Processing batch ${i}...'"
-                        sh "sleep 2"
-                        echo "  Batch ${i} completed successfully"
+                    container('worker') {
+                        // Performance demonstration
+                        for (int i = 1; i <= 5; i++) {
+                            echo "Performance test ${i}/5: Processing workload..."
+                            sh "echo 'Processing batch ${i}...'"
+                            sh "sleep 2"
+                            echo "  Batch ${i} completed successfully"
+                        }
                     }
                     
                     echo ""
@@ -120,15 +151,17 @@ pipeline {
                     
                     echo "Analyzing resource consumption patterns..."
                     
-                    // Resource analysis
-                    sh 'echo "CPU Information:"'
-                    sh 'nproc || echo "CPU cores: Available"'
-                    
-                    sh 'echo "Memory Usage:"'
-                    sh 'free -h || echo "Memory: Adequate"'
-                    
-                    sh 'echo "Process Information:"'
-                    sh 'ps aux | head -10 || echo "Processes: Running normally"'
+                    container('worker') {
+                        // Resource analysis
+                        sh 'echo "CPU Information:"'
+                        sh 'nproc || echo "CPU cores: Available"'
+                        
+                        sh 'echo "Memory Usage:"'
+                        sh 'free -h || echo "Memory: Adequate"'
+                        
+                        sh 'echo "Process Information:"'
+                        sh 'ps aux | head -10 || echo "Processes: Running normally"'
+                    }
                     
                     echo ""
                     echo "Resource utilization analysis completed"
@@ -157,13 +190,15 @@ pipeline {
                     echo "  Spot functionality: Verified"
                     echo "  Cost optimization: Active"
                     
-                    // Create test artifacts
-                    sh 'echo "Creating test artifacts..."'
-                    sh 'mkdir -p test-results'
-                    sh 'echo "Build: ${BUILD_NUMBER}" > test-results/build-info.txt'
-                    sh 'echo "Node: ${NODE_NAME}" >> test-results/build-info.txt'
-                    sh 'echo "Timestamp: ${BUILD_TIMESTAMP}" >> test-results/build-info.txt'
-                    sh 'ls -la test-results/'
+                    container('worker') {
+                        // Create test artifacts
+                        sh 'echo "Creating test artifacts..."'
+                        sh 'mkdir -p test-results'
+                        sh 'echo "Build: ${BUILD_NUMBER}" > test-results/build-info.txt'
+                        sh 'echo "Node: ${NODE_NAME}" >> test-results/build-info.txt'
+                        sh 'echo "Timestamp: ${BUILD_TIMESTAMP}" >> test-results/build-info.txt'
+                        sh 'ls -la test-results/'
+                    }
                     
                     echo ""
                     echo "Spot instance validation completed successfully"
@@ -180,15 +215,17 @@ pipeline {
                     
                     echo "Executing final system checks..."
                     
-                    // Final validation steps
-                    sh 'echo "Final Check 1: Workspace integrity"'
-                    sh 'ls -la | head -10'
-                    
-                    sh 'echo "Final Check 2: Test artifacts"'
-                    sh 'cat test-results/build-info.txt || echo "Artifacts: Created successfully"'
-                    
-                    sh 'echo "Final Check 3: System stability"'
-                    sh 'uptime || echo "System: Stable"'
+                    container('worker') {
+                        // Final validation steps
+                        sh 'echo "Final Check 1: Workspace integrity"'
+                        sh 'ls -la | head -10'
+                        
+                        sh 'echo "Final Check 2: Test artifacts"'
+                        sh 'cat test-results/build-info.txt || echo "Artifacts: Created successfully"'
+                        
+                        sh 'echo "Final Check 3: System stability"'
+                        sh 'uptime || echo "System: Stable"'
+                    }
                     
                     echo ""
                     echo "=========================================="
@@ -221,8 +258,10 @@ pipeline {
                 echo "===================="
                 echo "Performing cleanup operations..."
                 
-                // Cleanup operations
-                sh 'rm -rf test-results || echo "Cleanup completed"'
+                container('worker') {
+                    // Cleanup operations
+                    sh 'rm -rf test-results || echo "Cleanup completed"'
+                }
                 
                 echo "Cleanup completed successfully"
             }

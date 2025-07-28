@@ -7,19 +7,31 @@ controller:
   # Recursos optimizados para nuestro cluster
   resources:
     requests:
-      cpu: "300m"
-      memory: "512Mi"
+      cpu: "500m"
+      memory: "1Gi"
     limits:
-      cpu: "1"
-      memory: "2Gi"
+      cpu: "2"
+      memory: "4Gi"
   
-  # Configuración JVM más conservadora
+  # Configuración JVM optimizada para carga y estabilidad
   javaOpts: >-
     -Djenkins.install.runSetupWizard=false
     -Djava.awt.headless=true
     -XX:+UseG1GC
-    -Xms512m
-    -Xmx1536m
+    -XX:+UseStringDeduplication
+    -XX:+OptimizeStringConcat
+    -XX:+UseCompressedOops
+    -XX:MaxGCPauseMillis=100
+    -Xms1g
+    -Xmx3g
+    -Dhudson.model.Queue.slaveConnectTimeout=300000
+    -Dhudson.slaves.NodeProvisioner.initialDelay=10
+    -Dhudson.slaves.NodeProvisioner.MARGIN=50
+    -Dhudson.slaves.NodeProvisioner.MARGIN0=0.85
+    -Dhudson.model.LoadStatistics.clock=5000
+    -Dorg.apache.commons.jelly.tags.fmt.timeZone=Europe/Madrid
+    -Dhudson.model.Queue.maxRetries=3
+    -Dhudson.model.Queue.retryDelayFactor=2.0
   
   # Jenkins opts
   jenkinsOpts: "--webroot=/var/jenkins_cache/war"
@@ -43,6 +55,10 @@ controller:
     username: admin
     password: admin
 
+  # Configuración de ejecutores y límites
+  numExecutors: 2  # Máximo 2 pipelines simultáneos en master
+  executorMode: "NORMAL"
+
   # Plugins esenciales incluye Kubernetes para workers spot
   installPlugins:
     - kubernetes
@@ -53,6 +69,10 @@ controller:
     - credentials-binding
     - timestamper
     - role-strategy:3.2.0
+    - opentelemetry-api:1.49.0.75.v66006f513b_1f
+    - opentelemetry:3.1543.v8446b_92b_cd64
+    - lockable-resources:2.20
+    - throttle-concurrents:2.14
 
   # Configuración de servicio
   serviceType: LoadBalancer
@@ -65,9 +85,40 @@ controller:
     size: "8Gi"
     storageClass: "managed-csi"
 
-# Configuración del agente (deshabilitado por ahora)
+# Configuración del agente para workers spot
 agent:
-  enabled: false
+  enabled: true
+  # Configuración básica del agente
+  image:
+    repository: "jenkins/inbound-agent"
+    tag: "latest"
+  
+  # Recursos para los agentes
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+  
+  # Usar nodos spot para workers
+  nodeSelector:
+    nodepool: spot  # Usar el nodepool spot para workers
+  
+  # Tolerations para nodos spot
+  tolerations:
+    - key: "nodepool"
+      operator: "Equal"
+      value: "spot"
+      effect: "NoSchedule"
+    - key: "kubernetes.azure.com/scalesetpriority"
+      operator: "Equal"
+      value: "spot"
+      effect: "NoSchedule"
+  
+  # Namespace para los agentes
+  namespace: jenkins-workers
   
 # Configurar RBAC
 rbac:
